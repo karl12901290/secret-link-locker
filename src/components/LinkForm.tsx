@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,10 +26,9 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
     setLoading(true);
 
     try {
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) throw new Error("User not authenticated");
+      // Get the current user's session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("User not authenticated");
 
       // Create link in database
       const { data, error } = await supabase
@@ -41,7 +39,7 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
             title: title || url,
             password: usePassword ? password : null,
             expiration_date: useExpiration ? new Date(expirationDate).toISOString() : null,
-            user_id: user.id,
+            user_id: session.user.id,
           },
         ])
         .select();
