@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ interface LinkData {
   url: string;
   password: string | null;
   expiration_date: string | null;
+  views: number;
 }
 
 const ViewLink = () => {
@@ -43,12 +43,10 @@ const ViewLink = () => {
         if (data) {
           setLink(data);
           
-          // Check if link is expired
           if (data.expiration_date && new Date(data.expiration_date) < new Date()) {
             setExpired(true);
           }
           
-          // If no password, auto-authenticate
           if (!data.password) {
             setAuthenticated(true);
             incrementViews();
@@ -72,7 +70,6 @@ const ViewLink = () => {
     if (!id) return;
     
     try {
-      // Call a supabase function to increment views
       await supabase
         .from("links")
         .update({ views: link!.views + 1 })
@@ -90,9 +87,6 @@ const ViewLink = () => {
     setVerifying(true);
     
     try {
-      // In a real app, this would use a secure password verification
-      // For demo purposes, we're directly comparing passwords which is NOT secure
-      // Ideally, this would be done via a serverless function with proper hashing
       if (password === link.password) {
         setAuthenticated(true);
         incrementViews();
@@ -212,7 +206,6 @@ const ViewLink = () => {
     );
   }
   
-  // If authenticated or no password required
   return (
     <div className="flex h-screen items-center justify-center p-4 bg-gradient-to-b from-gray-50 to-gray-100">
       <Card className="w-full max-w-md">
