@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
   const [useExpiration, setUseExpiration] = useState(false);
   const [expirationDate, setExpirationDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
   
   // File upload state
@@ -31,15 +32,50 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
   const [formType, setFormType] = useState<"link" | "file">("link");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get the user ID and ensure storage bucket exists when the component mounts
+  useEffect(() => {
+    const initializeComponent = async () => {
+      // Get user session
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        setUserId(data.session.user.id);
+        
+        // Check if the secure-files bucket exists and create it if it doesn't
+        const { data: buckets, error } = await supabase.storage.listBuckets();
+        
+        const bucketExists = buckets?.some(bucket => bucket.name === 'secure-files');
+        
+        if (!bucketExists) {
+          // If bucket doesn't exist, try to create it
+          try {
+            const { data, error } = await supabase.storage.createBucket('secure-files', {
+              public: true,
+              fileSizeLimit: 50 * 1024 * 1024 // 50MB limit
+            });
+            
+            if (error) {
+              console.error("Error creating bucket:", error);
+            }
+          } catch (err) {
+            console.error("Failed to create storage bucket:", err);
+          }
+        }
+      }
+    };
+    
+    initializeComponent();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setUploadProgress(0);
 
     try {
-      // Get the current user's session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("User not authenticated");
+      // Check if we have a user ID
+      if (!userId) {
+        throw new Error("User not authenticated or profile not found");
+      }
 
       let finalUrl = url;
       let finalTitle = title;
@@ -50,12 +86,10 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
         const fileName = `${uuidv4()}.${fileExt}`;
         finalTitle = title || file.name;
         
-        // Create a bucket if it doesn't exist (this is handled by Supabase)
-        
         // Upload file to Supabase Storage
         const { error: uploadError, data } = await supabase.storage
           .from('secure-files')
-          .upload(`${session.user.id}/${fileName}`, file, {
+          .upload(`${userId}/${fileName}`, file, {
             cacheControl: '3600',
             upsert: false
           });
@@ -65,12 +99,37 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
         // Get the URL of the uploaded file
         const { data: { publicUrl } } = supabase.storage
           .from('secure-files')
-          .getPublicUrl(`${session.user.id}/${fileName}`);
+          .getPublicUrl(`${userId}/${fileName}`);
           
         finalUrl = publicUrl;
       }
 
-      // Create link in database
+      // First, check if the user profile exists
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+      
+      if (profileError || !profileData) {
+        // Create a profile if it doesn't exist
+        const { data: userSession } = await supabase.auth.getSession();
+        const userEmail = userSession?.session?.user?.email || "";
+        
+        const { error: insertProfileError } = await supabase
+          .from("profiles")
+          .insert([
+            {
+              id: userId,
+              email: userEmail,
+              links_created: 0
+            }
+          ]);
+        
+        if (insertProfileError) throw insertProfileError;
+      }
+
+      // Now create the link
       const { data, error } = await supabase
         .from("links")
         .insert([
@@ -79,7 +138,7 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
             title: finalTitle || finalUrl,
             password: usePassword ? password : null,
             expiration_date: useExpiration ? new Date(expirationDate).toISOString() : null,
-            user_id: session.user.id,
+            user_id: userId,
           },
         ])
         .select();
@@ -105,6 +164,7 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
       // Refresh the links list
       onSuccess();
     } catch (error: any) {
+      console.error("Link creation error:", error);
       toast({
         title: "Error creating link",
         description: error.message,
