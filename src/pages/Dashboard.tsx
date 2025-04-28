@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import LinkForm from "@/components/LinkForm";
 import LinkList from "@/components/LinkList";
+import PlanInfo from "@/components/PlanInfo";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,32 @@ const Dashboard = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">SecretLinkLocker Dashboard</h1>
           <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <PlanInfo />
+          </div>
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Tips</CardTitle>
+                <CardDescription>Get the most out of your plan</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc pl-5 space-y-2 text-sm">
+                  <li>Add password protection for extra security</li>
+                  <li>Set expiration dates to control link access</li>
+                  <li>Check analytics for your links' performance</li>
+                  <li>
+                    <Button variant="link" className="p-0 h-auto" asChild>
+                      <a href="/pricing">Need more links? Upgrade your plan</a>
+                    </Button>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Tabs defaultValue="create" className="w-full">

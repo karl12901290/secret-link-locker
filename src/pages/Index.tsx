@@ -19,7 +19,7 @@ const Index = () => {
               <RouterLink to="/auth">Get Started</RouterLink>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <RouterLink to="#features">Learn More</RouterLink>
+              <RouterLink to="/pricing">View Plans</RouterLink>
             </Button>
           </div>
         </div>
@@ -60,6 +60,17 @@ const Index = () => {
           </Card>
         </div>
 
+        {/* Pricing CTA */}
+        <div className="mb-16 text-center">
+          <h2 className="text-3xl font-bold mb-4">Plans for Everyone</h2>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            From free personal use to professional teams, we have plans to fit your needs.
+          </p>
+          <Button asChild size="lg">
+            <RouterLink to="/pricing">View Pricing</RouterLink>
+          </Button>
+        </div>
+
         {/* How it works */}
         <div className="mb-16">
           <h2 className="text-3xl font-bold text-center mb-8">How It Works</h2>
@@ -83,7 +94,7 @@ const Index = () => {
         <div className="text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to share securely?</h2>
           <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
-            Create your first secure link in seconds. No credit card required.
+            Create your first secure link in seconds. No credit card required for basic use.
           </p>
           <Button asChild size="lg">
             <RouterLink to="/auth">Get Started Now</RouterLink>

@@ -53,30 +53,122 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          allow_analytics: boolean | null
+          allow_password: boolean | null
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          links_limit: number
+          max_expiration_days: number | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          allow_analytics?: boolean | null
+          allow_password?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          links_limit: number
+          max_expiration_days?: number | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          allow_analytics?: boolean | null
+          allow_password?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          links_limit?: number
+          max_expiration_days?: number | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          billing_cycle_start: string | null
           created_at: string | null
+          credits_balance: number | null
           email: string
           id: string
           links_created: number
           plan: string
+          plan_id: string | null
           updated_at: string | null
         }
         Insert: {
+          billing_cycle_start?: string | null
           created_at?: string | null
+          credits_balance?: number | null
           email: string
           id: string
           links_created?: number
           plan?: string
+          plan_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          billing_cycle_start?: string | null
           created_at?: string | null
+          credits_balance?: number | null
           email?: string
           id?: string
           links_created?: number
           plan?: string
+          plan_id?: string | null
           updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          payment_method: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string
+          status?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
