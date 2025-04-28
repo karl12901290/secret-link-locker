@@ -1,17 +1,21 @@
-import { useState } from "react";
+
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload } from "lucide-react";
+import { Upload, File, Link as LinkIcon } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { v4 as uuidv4 } from "uuid";
 
 interface LinkFormProps {
   onSuccess: () => void;
 }
 
 const LinkForm = ({ onSuccess }: LinkFormProps) => {
+  // Form state
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [password, setPassword] = useState("");
@@ -20,23 +24,59 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
   const [expirationDate, setExpirationDate] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // File upload state
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [formType, setFormType] = useState<"link" | "file">("link");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setUploadProgress(0);
 
     try {
       // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("User not authenticated");
 
+      let finalUrl = url;
+      let finalTitle = title;
+
+      // Handle file upload if a file is selected
+      if (formType === "file" && file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        finalTitle = title || file.name;
+        
+        // Create a bucket if it doesn't exist (this is handled by Supabase)
+        
+        // Upload file to Supabase Storage
+        const { error: uploadError, data } = await supabase.storage
+          .from('secure-files')
+          .upload(`${session.user.id}/${fileName}`, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (uploadError) throw uploadError;
+        
+        // Get the URL of the uploaded file
+        const { data: { publicUrl } } = supabase.storage
+          .from('secure-files')
+          .getPublicUrl(`${session.user.id}/${fileName}`);
+          
+        finalUrl = publicUrl;
+      }
+
       // Create link in database
       const { data, error } = await supabase
         .from("links")
         .insert([
           {
-            url,
-            title: title || url,
+            url: finalUrl,
+            title: finalTitle || finalUrl,
             password: usePassword ? password : null,
             expiration_date: useExpiration ? new Date(expirationDate).toISOString() : null,
             user_id: session.user.id,
@@ -48,7 +88,7 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
 
       toast({
         title: "Success!",
-        description: "Your secure link has been created.",
+        description: formType === "file" ? "Your file has been uploaded and secure link created." : "Your secure link has been created.",
       });
 
       // Reset form
@@ -58,6 +98,9 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
       setUsePassword(false);
       setUseExpiration(false);
       setExpirationDate("");
+      setFile(null);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       // Refresh the links list
       onSuccess();
@@ -72,30 +115,100 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      if (!title) {
+        setTitle(e.target.files[0].name);
+      }
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="url">URL to protect</Label>
-        <Input
-          id="url"
-          type="url"
-          placeholder="https://example.com/my-file.pdf"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required
-        />
-      </div>
+      <Tabs 
+        defaultValue="link" 
+        onValueChange={(value) => setFormType(value as "link" | "file")}
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="link" className="flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            <span>Protect URL</span>
+          </TabsTrigger>
+          <TabsTrigger value="file" className="flex items-center gap-2">
+            <File className="h-4 w-4" />
+            <span>Upload File</span>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="space-y-2">
-        <Label htmlFor="title">Title (optional)</Label>
-        <Input
-          id="title"
-          type="text"
-          placeholder="My Secure Document"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
+        <TabsContent value="link" className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="url">URL to protect</Label>
+            <Input
+              id="url"
+              type="url"
+              placeholder="https://example.com/my-file.pdf"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required={formType === "link"}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title-link">Title (optional)</Label>
+            <Input
+              id="title-link"
+              type="text"
+              placeholder="My Secure Document"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="file" className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="file">File to upload</Label>
+            <div className="border rounded-md p-4 flex flex-col items-center justify-center gap-2 bg-muted/20">
+              <Input
+                id="file"
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+                required={formType === "file"}
+              />
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {file ? "Change File" : "Select File"}
+              </Button>
+              {file && (
+                <div className="text-sm font-medium mt-2 flex items-center">
+                  <File className="h-4 w-4 mr-2 text-primary" />
+                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title-file">Title (optional)</Label>
+            <Input
+              id="title-file"
+              type="text"
+              placeholder="My Secure File"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
@@ -151,10 +264,10 @@ const LinkForm = ({ onSuccess }: LinkFormProps) => {
             <span className="animate-spin mr-2">
               <Upload className="h-4 w-4" />
             </span>
-            Creating...
+            {formType === "file" ? "Uploading..." : "Creating..."}
           </span>
         ) : (
-          "Create Secure Link"
+          formType === "file" ? "Upload File & Create Link" : "Create Secure Link"
         )}
       </Button>
     </form>
