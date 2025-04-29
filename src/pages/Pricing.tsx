@@ -11,10 +11,11 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, XCircle, Zap } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Zap, Bitcoin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
+import { createCheckoutSession, createTopUp } from "@/services/subscription";
 
 type Plan = Tables<"plans">;
 
@@ -79,27 +80,52 @@ const Pricing = () => {
     setLoading(true);
     
     try {
-      // For now, we'll just redirect to a Stripe checkout function
-      // In a future step we'll implement the actual payment process
-      await initiateCheckout(planId);
+      const result = await createCheckoutSession(planId);
+      
+      if (result && result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("Failed to create checkout session");
+      }
     } catch (error: any) {
       toast({
         title: "Error selecting plan",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
 
-  const initiateCheckout = async (planId: string) => {
-    // We'll implement this with Stripe in the next step
-    // For now, just show a message
-    toast({
-      title: "Coming Soon",
-      description: "Payment processing will be implemented in the next step.",
-    });
+  const handleTopUp = async (amount: number, credits: number) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Please sign in",
+        description: "You need to sign in before purchasing credits",
+      });
+      navigate("/auth");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const result = await createTopUp(amount, credits);
+      
+      if (result && result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("Failed to create top-up session");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error creating top-up",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderFeatures = (featuresArray: any[]) => {
@@ -121,8 +147,12 @@ const Pricing = () => {
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
           <p className="text-gray-600 max-w-xl mx-auto">
-            Select the plan that fits your needs. Upgrade or downgrade anytime.
+            Select the plan that fits your needs. Pay with cryptocurrency.
           </p>
+          <div className="flex items-center justify-center mt-4">
+            <Bitcoin className="h-5 w-5 text-orange-500 mr-2" />
+            <span className="text-sm">We accept cryptocurrency payments</span>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -185,7 +215,10 @@ const Pricing = () => {
                     ? "Current Plan"
                     : loading
                     ? "Processing..."
-                    : "Select Plan"}
+                    : <>
+                        <Bitcoin className="h-4 w-4 mr-2" /> 
+                        Pay with Crypto
+                      </>}
                 </Button>
               </CardFooter>
             </Card>
@@ -203,15 +236,30 @@ const Pricing = () => {
               Need more links but don't want to upgrade? Buy additional credits anytime.
             </p>
             <div className="grid grid-cols-3 gap-3">
-              <Button variant="outline" className="flex flex-col" disabled>
+              <Button 
+                variant="outline" 
+                className="flex flex-col" 
+                onClick={() => handleTopUp(1, 20)}
+                disabled={loading}
+              >
                 <span className="text-lg font-bold">$1</span>
                 <span className="text-xs">20 links</span>
               </Button>
-              <Button variant="outline" className="flex flex-col" disabled>
+              <Button 
+                variant="outline" 
+                className="flex flex-col" 
+                onClick={() => handleTopUp(3, 70)}
+                disabled={loading}
+              >
                 <span className="text-lg font-bold">$3</span>
                 <span className="text-xs">70 links</span>
               </Button>
-              <Button variant="outline" className="flex flex-col" disabled>
+              <Button 
+                variant="outline" 
+                className="flex flex-col" 
+                onClick={() => handleTopUp(5, 120)}
+                disabled={loading}
+              >
                 <span className="text-lg font-bold">$5</span>
                 <span className="text-xs">120 links</span>
               </Button>

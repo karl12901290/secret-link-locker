@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export async function createCheckoutSession(planId: string) {
   try {
-    const { data, error } = await supabase.functions.invoke("stripe", {
-      body: { action: "create-checkout-session", planId },
+    const { data, error } = await supabase.functions.invoke("coinbase", {
+      body: { action: "create-checkout", planId },
     });
 
     if (error) throw error;
@@ -17,12 +17,9 @@ export async function createCheckoutSession(planId: string) {
 
 export async function getSubscriptionDetails() {
   try {
-    const { data, error } = await supabase.functions.invoke("stripe", {
-      body: { action: "get-subscription" },
-    });
-
-    if (error) throw error;
-    return data;
+    // This function is kept for API compatibility, but we'll need to adapt it
+    // for Coinbase Commerce in a future iteration if needed
+    return null;
   } catch (error) {
     console.error("Error getting subscription details:", error);
     throw error;
@@ -31,7 +28,7 @@ export async function getSubscriptionDetails() {
 
 export async function createTopUp(amount: number, credits: number) {
   try {
-    const { data, error } = await supabase.functions.invoke("stripe", {
+    const { data, error } = await supabase.functions.invoke("coinbase", {
       body: { action: "create-top-up", amount, credits },
     });
 
