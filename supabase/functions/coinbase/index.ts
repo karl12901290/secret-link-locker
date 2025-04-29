@@ -36,37 +36,35 @@ serve(async (req) => {
     );
   }
 
-  // Verify JWT token to get user ID
+  // Verify JWT token to get user ID (except for check-payment-status which might be called without auth)
+  let user = null;
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Authorization header required" }),
-      { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   
-  if (authError || !user) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    
+    if (!authError && userData?.user) {
+      user = userData.user;
+    }
   }
-
-  const { action, planId, amount, credits } = requestData;
+  
+  const { action, planId, amount, credits, code } = requestData;
   
   // Handle different actions
   try {
     switch (action) {
       case "create-checkout": {
+        if (!user) {
+          return new Response(
+            JSON.stringify({ error: "Unauthorized" }),
+            { 
+              status: 401, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+        
         // Get plan details
         const { data: plan, error: planError } = await supabase
           .from("plans")
@@ -76,17 +74,6 @@ serve(async (req) => {
 
         if (planError || !plan) {
           throw new Error("Plan not found");
-        }
-
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("email")
-          .eq("id", user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new Error("User profile not found");
         }
 
         // Create a checkout with Coinbase Commerce
@@ -134,6 +121,16 @@ serve(async (req) => {
       }
 
       case "create-top-up": {
+        if (!user) {
+          return new Response(
+            JSON.stringify({ error: "Unauthorized" }),
+            { 
+              status: 401, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+        
         if (!amount || !credits) {
           throw new Error("Amount and credits are required");
         }
@@ -174,6 +171,38 @@ serve(async (req) => {
           JSON.stringify({ 
             url: chargeData.data.hosted_url,
             code: chargeData.data.code
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+
+      case "check-payment-status": {
+        if (!code) {
+          throw new Error("Charge code is required");
+        }
+
+        // Check payment status with Coinbase Commerce
+        const response = await fetch(`${COINBASE_API_URL}/charges/${code}`, {
+          method: "GET",
+          headers: {
+            "X-CC-Api-Key": COINBASE_API_KEY,
+            "X-CC-Version": "2018-03-22"
+          }
+        });
+
+        const chargeData = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(`Coinbase Commerce API error: ${JSON.stringify(chargeData)}`);
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            status: chargeData.data.timeline[chargeData.data.timeline.length - 1].status,
+            charge: chargeData.data
           }),
           { 
             status: 200, 

@@ -4,22 +4,28 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
-import { getUserPlanDetails } from "@/services/subscription";
+import { getUserPlanDetails, getSubscriptionDetails } from "@/services/subscription";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Calendar } from "lucide-react";
+import { Zap, Calendar, Bitcoin } from "lucide-react";
 import { format } from "date-fns";
 
 const PlanInfo = () => {
   const [planDetails, setPlanDetails] = useState<any>(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchPlanDetails = async () => {
+    const fetchDetails = async () => {
       try {
-        const data = await getUserPlanDetails();
-        setPlanDetails(data);
+        const [planData, subData] = await Promise.all([
+          getUserPlanDetails(),
+          getSubscriptionDetails()
+        ]);
+        
+        setPlanDetails(planData);
+        setSubscriptionDetails(subData);
       } catch (error: any) {
         toast({
           title: "Error loading plan details",
@@ -31,7 +37,7 @@ const PlanInfo = () => {
       }
     };
 
-    fetchPlanDetails();
+    fetchDetails();
   }, [toast]);
 
   if (loading) {
@@ -115,6 +121,13 @@ const PlanInfo = () => {
             </div>
           )}
 
+          {subscriptionDetails && (
+            <div className="flex items-center">
+              <Bitcoin className="h-4 w-4 text-primary mr-2" />
+              <span>Payment method: Cryptocurrency</span>
+            </div>
+          )}
+
           {plan?.price > 0 && (
             <div className="mt-4">
               <div className="text-xl font-bold">${plan.price}<span className="text-sm text-gray-600">/month</span></div>
@@ -126,11 +139,6 @@ const PlanInfo = () => {
         <Button variant="outline" asChild>
           <Link to="/pricing">Change Plan</Link>
         </Button>
-        {plan?.price > 0 && (
-          <Button variant="outline" disabled>
-            Manage Billing
-          </Button>
-        )}
       </CardFooter>
     </Card>
   );

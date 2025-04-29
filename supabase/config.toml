@@ -33,6 +33,8 @@ enabled = true
 [functions.stripe-webhook]
 verify_jwt = false
 
-[functions.coinbase-webhook]
+[functions.coinbase]
 verify_jwt = false
 
+[functions.coinbase-webhook]
+verify_jwt = false

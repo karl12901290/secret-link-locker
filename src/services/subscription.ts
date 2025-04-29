@@ -17,9 +17,22 @@ export async function createCheckoutSession(planId: string) {
 
 export async function getSubscriptionDetails() {
   try {
-    // This function is kept for API compatibility, but we'll need to adapt it
-    // for Coinbase Commerce in a future iteration if needed
-    return null;
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", session.session.user.id)
+      .eq("type", "subscription")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    return data?.[0] || null;
   } catch (error) {
     console.error("Error getting subscription details:", error);
     throw error;
@@ -53,6 +66,7 @@ export async function getUserPlanDetails() {
         credits_balance,
         plan,
         billing_cycle_start,
+        links_created,
         plans:plan_id (
           name,
           price,
@@ -69,6 +83,20 @@ export async function getUserPlanDetails() {
     return data;
   } catch (error) {
     console.error("Error getting user plan details:", error);
+    throw error;
+  }
+}
+
+export async function checkCryptoPaymentStatus(code: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke("coinbase", {
+      body: { action: "check-payment-status", code },
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error checking payment status:", error);
     throw error;
   }
 }

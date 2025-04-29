@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
 import { createCheckoutSession, createTopUp } from "@/services/subscription";
+import { useEffect } from "react";
+import { toast as sonnerToast } from "sonner";
 
 type Plan = Tables<"plans">;
 
@@ -26,6 +28,34 @@ const Pricing = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  // Check for payment success/cancelled url params
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const topUpStatus = searchParams.get("top_up");
+    const credits = searchParams.get("credits");
+
+    if (paymentStatus === "success") {
+      sonnerToast.success("Payment successful", {
+        description: "Your subscription has been activated"
+      });
+    } else if (paymentStatus === "cancelled") {
+      sonnerToast.error("Payment cancelled", {
+        description: "Your subscription was not completed"
+      });
+    }
+
+    if (topUpStatus === "success" && credits) {
+      sonnerToast.success("Top-up successful", {
+        description: `${credits} credits have been added to your account`
+      });
+    } else if (topUpStatus === "cancelled") {
+      sonnerToast.error("Top-up cancelled", {
+        description: "Your credit purchase was not completed"
+      });
+    }
+  }, [searchParams]);
 
   // Fetch plans and user auth status
   useEffect(() => {
@@ -93,6 +123,7 @@ const Pricing = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -151,7 +182,7 @@ const Pricing = () => {
           </p>
           <div className="flex items-center justify-center mt-4">
             <Bitcoin className="h-5 w-5 text-orange-500 mr-2" />
-            <span className="text-sm">We accept cryptocurrency payments</span>
+            <span className="text-sm">We accept cryptocurrency payments via Coinbase Commerce</span>
           </div>
         </div>
 
@@ -201,7 +232,7 @@ const Pricing = () => {
                     </span>
                   </div>
                   
-                  {renderFeatures(plan.features as string[] || [])}
+                  {plan.features && Array.isArray(plan.features) && renderFeatures(plan.features as string[])}
                 </div>
               </CardContent>
               <CardFooter>
