@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
 import { createCheckoutSession, createTopUp } from "@/services/subscription";
-import { useEffect } from "react";
 import { toast as sonnerToast } from "sonner";
 
 type Plan = Tables<"plans">;
