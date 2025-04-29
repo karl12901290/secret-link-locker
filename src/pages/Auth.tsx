@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +17,44 @@ const Auth = () => {
   const [verificationSent, setVerificationSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  // Check if the user is arriving from an email verification link
+  useEffect(() => {
+    const handleEmailVerification = async () => {
+      // Check if there's a verification token in the URL
+      if (searchParams.has('access_token') || searchParams.has('refresh_token')) {
+        setLoading(true);
+        
+        try {
+          // Exchange the token for a session
+          const { data, error } = await supabase.auth.getUser();
+          
+          if (error) throw error;
+          
+          if (data?.user) {
+            // User is verified and authenticated, redirect to dashboard
+            toast({
+              title: "Email verified",
+              description: "Your email has been verified successfully.",
+            });
+            navigate("/dashboard");
+          }
+        } catch (error: any) {
+          console.error("Error verifying email:", error);
+          toast({
+            title: "Verification error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    handleEmailVerification();
+  }, [searchParams, navigate, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +150,17 @@ const Auth = () => {
           <CardDescription>Secure file sharing made simple</CardDescription>
         </CardHeader>
         <CardContent>
-          {verificationSent ? (
+          {loading ? (
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+              </div>
+              <h3 className="font-semibold">Processing...</h3>
+              <p className="text-sm text-muted-foreground">
+                Please wait while we verify your account.
+              </p>
+            </div>
+          ) : verificationSent ? (
             <div className="text-center space-y-4">
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <Mail className="w-6 h-6 text-primary" />
