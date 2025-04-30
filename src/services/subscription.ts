@@ -3,6 +3,37 @@ import { supabase } from "@/integrations/supabase/client";
 
 export async function createCheckoutSession(planId: string) {
   try {
+    // Get plan details first
+    const { data: plan, error: planError } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("id", planId)
+      .single();
+    
+    if (planError) throw planError;
+    
+    // If it's a free plan, handle it directly
+    if (plan.price === 0 || plan.name.toLowerCase() === "explorer") {
+      // Update user's profile with the free plan
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session) throw new Error("Not authenticated");
+      
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ 
+          plan: plan.name,
+          plan_id: plan.id,
+          billing_cycle_start: new Date().toISOString()
+        })
+        .eq("id", session.session.user.id);
+        
+      if (updateError) throw updateError;
+      
+      // Return a success response without creating a Coinbase checkout
+      return { url: "/dashboard?plan_updated=success", isFree: true };
+    }
+    
+    // For paid plans, create a checkout session
     const { data, error } = await supabase.functions.invoke("coinbase", {
       body: { action: "create-checkout", planId },
     });

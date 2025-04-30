@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.14.0";
 
@@ -75,6 +74,38 @@ serve(async (req) => {
         if (planError || !plan) {
           throw new Error("Plan not found");
         }
+        
+        // Skip Coinbase API call for free plans
+        if (plan.price === 0) {
+          // Update user's profile with the free plan
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({ 
+              plan: plan.name,
+              plan_id: planId,
+              billing_cycle_start: new Date().toISOString()
+            })
+            .eq("id", user.id);
+            
+          if (updateError) throw updateError;
+          
+          return new Response(
+            JSON.stringify({ 
+              url: `${req.headers.get("origin")}/dashboard?plan_updated=success`, 
+              isFree: true
+            }),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+        
+        // Ensure the price is at least 0.001 USD for Coinbase Commerce
+        const price = parseFloat(plan.price);
+        if (price < 0.001) {
+          throw new Error("Minimum price for Coinbase Commerce is 0.001 USD");
+        }
 
         // Create a checkout with Coinbase Commerce
         const response = await fetch(`${COINBASE_API_URL}/charges`, {
@@ -89,7 +120,7 @@ serve(async (req) => {
             description: plan.description,
             pricing_type: "fixed_price",
             local_price: {
-              amount: plan.price.toString(),
+              amount: price.toString(),
               currency: "USD"
             },
             metadata: {

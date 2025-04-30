@@ -11,7 +11,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, XCircle, Zap, Bitcoin } from "lucide-react";
+import { Shield, CheckCircle, Bitcoin, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -34,6 +34,7 @@ const Pricing = () => {
     const paymentStatus = searchParams.get("payment");
     const topUpStatus = searchParams.get("top_up");
     const credits = searchParams.get("credits");
+    const planUpdated = searchParams.get("plan_updated");
 
     if (paymentStatus === "success") {
       sonnerToast.success("Payment successful", {
@@ -57,6 +58,14 @@ const Pricing = () => {
       sonnerToast.error("Top-up cancelled", {
         description: "Your credit purchase was not completed"
       });
+    }
+    
+    if (planUpdated === "success") {
+      sonnerToast.success("Plan updated successfully", {
+        description: "Your free plan has been activated"
+      });
+      // Redirect to dashboard after plan update
+      setTimeout(() => navigate("/dashboard"), 1500);
     }
   }, [searchParams, navigate]);
 
@@ -102,7 +111,7 @@ const Pricing = () => {
     fetchPlansAndAuthStatus();
   }, [toast]);
 
-  const handleSelectPlan = async (planName: string, planId: string) => {
+  const handleSelectPlan = async (planName: string, planId: string, isFree: boolean = false) => {
     if (!isAuthenticated) {
       // Store the selected plan in session storage and redirect to auth
       sessionStorage.setItem("selectedPlan", planId);
@@ -119,7 +128,10 @@ const Pricing = () => {
     try {
       const result = await createCheckoutSession(planId);
       
-      if (result && result.url) {
+      if (result?.isFree) {
+        // Free plan was activated directly
+        navigate(result.url);
+      } else if (result && result.url) {
         window.location.href = result.url;
       } else {
         throw new Error("Failed to create checkout session");
@@ -258,7 +270,7 @@ const Pricing = () => {
               </CardContent>
               <CardFooter>
                 <Button 
-                  onClick={() => handleSelectPlan(plan.name, plan.id)}
+                  onClick={() => handleSelectPlan(plan.name, plan.id, plan.price === 0)}
                   disabled={loading || currentPlan === plan.name}
                   className="w-full"
                   variant={plan.name === "Power" ? "default" : "outline"}
@@ -267,6 +279,8 @@ const Pricing = () => {
                     ? "Current Plan"
                     : loading
                     ? "Processing..."
+                    : plan.price === 0 
+                    ? "Select Free Plan"
                     : <>
                         <Bitcoin className="h-4 w-4 mr-2" /> 
                         Pay with Crypto
