@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ const Pricing = () => {
       sonnerToast.success("Payment successful", {
         description: "Your subscription has been activated"
       });
+      // Redirect to dashboard after successful payment
+      setTimeout(() => navigate("/dashboard"), 1500);
     } else if (paymentStatus === "cancelled") {
       sonnerToast.error("Payment cancelled", {
         description: "Your subscription was not completed"
@@ -48,12 +51,14 @@ const Pricing = () => {
       sonnerToast.success("Top-up successful", {
         description: `${credits} credits have been added to your account`
       });
+      // Redirect to dashboard after successful top-up
+      setTimeout(() => navigate("/dashboard"), 1500);
     } else if (topUpStatus === "cancelled") {
       sonnerToast.error("Top-up cancelled", {
         description: "Your credit purchase was not completed"
       });
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // Fetch plans and user auth status
   useEffect(() => {
@@ -101,6 +106,10 @@ const Pricing = () => {
     if (!isAuthenticated) {
       // Store the selected plan in session storage and redirect to auth
       sessionStorage.setItem("selectedPlan", planId);
+      toast({
+        title: "Authentication required",
+        description: "Please sign in or create an account first"
+      });
       navigate("/auth");
       return;
     }
@@ -129,8 +138,8 @@ const Pricing = () => {
   const handleTopUp = async (amount: number, credits: number) => {
     if (!isAuthenticated) {
       toast({
-        title: "Please sign in",
-        description: "You need to sign in before purchasing credits",
+        title: "Authentication required",
+        description: "Please sign in or create an account first"
       });
       navigate("/auth");
       return;
@@ -182,6 +191,20 @@ const Pricing = () => {
             <Bitcoin className="h-5 w-5 text-orange-500 mr-2" />
             <span className="text-sm">We accept cryptocurrency payments via Coinbase Commerce</span>
           </div>
+          {!isAuthenticated && (
+            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+              <p className="text-yellow-700">
+                You need an account to subscribe to a plan. 
+                <Button 
+                  variant="link" 
+                  className="text-primary" 
+                  onClick={() => navigate("/auth")}
+                >
+                  Sign in or create an account
+                </Button>
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -269,7 +292,7 @@ const Pricing = () => {
                 variant="outline" 
                 className="flex flex-col" 
                 onClick={() => handleTopUp(1, 20)}
-                disabled={loading}
+                disabled={loading || !isAuthenticated}
               >
                 <span className="text-lg font-bold">$1</span>
                 <span className="text-xs">20 links</span>
@@ -278,7 +301,7 @@ const Pricing = () => {
                 variant="outline" 
                 className="flex flex-col" 
                 onClick={() => handleTopUp(3, 70)}
-                disabled={loading}
+                disabled={loading || !isAuthenticated}
               >
                 <span className="text-lg font-bold">$3</span>
                 <span className="text-xs">70 links</span>
@@ -287,7 +310,7 @@ const Pricing = () => {
                 variant="outline" 
                 className="flex flex-col" 
                 onClick={() => handleTopUp(5, 120)}
-                disabled={loading}
+                disabled={loading || !isAuthenticated}
               >
                 <span className="text-lg font-bold">$5</span>
                 <span className="text-xs">120 links</span>

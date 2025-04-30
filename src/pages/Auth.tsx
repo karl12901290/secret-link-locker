@@ -38,7 +38,15 @@ const Auth = () => {
               title: "Email verified",
               description: "Your email has been verified successfully.",
             });
-            navigate("/dashboard");
+            
+            // Check if there was a selected plan in session storage
+            const selectedPlan = sessionStorage.getItem("selectedPlan");
+            if (selectedPlan) {
+              sessionStorage.removeItem("selectedPlan");
+              navigate("/pricing");
+            } else {
+              navigate("/dashboard");
+            }
           }
         } catch (error: any) {
           console.error("Error verifying email:", error);
@@ -108,7 +116,14 @@ const Auth = () => {
         return;
       }
       
-      navigate("/dashboard");
+      // Check if there was a selected plan in session storage
+      const selectedPlan = sessionStorage.getItem("selectedPlan");
+      if (selectedPlan) {
+        sessionStorage.removeItem("selectedPlan");
+        navigate("/pricing");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Error",
