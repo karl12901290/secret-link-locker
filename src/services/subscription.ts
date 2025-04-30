@@ -23,7 +23,8 @@ export async function createCheckoutSession(planId: string) {
         .update({ 
           plan: plan.name,
           plan_id: plan.id,
-          billing_cycle_start: new Date().toISOString()
+          billing_cycle_start: new Date().toISOString(),
+          // Don't reset links_created when changing to free plan
         })
         .eq("id", session.session.user.id);
         
