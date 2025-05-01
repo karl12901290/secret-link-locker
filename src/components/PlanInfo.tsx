@@ -83,7 +83,7 @@ const PlanInfo = memo(() => {
   }
 
   const plan = planDetails.plans;
-  const usedLinksPercent = plan?.links_limit > 0 
+  const usedLinksPercent = plan?.links_limit && plan.links_limit > 0 
     ? (planDetails.links_created / plan.links_limit) * 100
     : 0;
 
@@ -104,7 +104,7 @@ const PlanInfo = memo(() => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {plan?.links_limit > 0 && (
+          {plan?.links_limit && plan.links_limit > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Links Usage</span>
@@ -146,7 +146,7 @@ const PlanInfo = memo(() => {
             </div>
           )}
 
-          {plan?.price > 0 && (
+          {plan?.price && plan.price > 0 && (
             <div className="mt-4">
               <div className="text-xl font-bold">${plan.price}<span className="text-sm text-gray-600">/month</span></div>
             </div>

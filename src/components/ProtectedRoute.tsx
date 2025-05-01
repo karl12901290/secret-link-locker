@@ -1,6 +1,6 @@
 
 import { useState, useEffect, memo } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,7 @@ const ProtectedRoute = memo(({ children }: ProtectedRouteProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasPlan, setHasPlan] = useState(true); // Default to true
+  const location = useLocation();
 
   useEffect(() => {
     // Set up auth state listener FIRST
