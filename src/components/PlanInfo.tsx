@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -9,45 +9,44 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Zap, Calendar, Bitcoin } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 
-const PlanInfo = () => {
-  const [planDetails, setPlanDetails] = useState<any>(null);
-  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+// Memoize component to prevent unnecessary re-renders
+const PlanInfo = memo(() => {
   const { toast } = useToast();
+  
+  // Use React Query for efficient data fetching with caching
+  const { data: planDetails, isLoading: planLoading } = useQuery({
+    queryKey: ['planDetails'],
+    queryFn: getUserPlanDetails,
+    staleTime: 60000, // Consider data fresh for 1 minute
+    onError: (error: any) => {
+      toast({
+        title: "Error loading plan details",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const [planData, subData] = await Promise.all([
-          getUserPlanDetails(),
-          getSubscriptionDetails()
-        ]);
-        
-        setPlanDetails(planData);
-        setSubscriptionDetails(subData);
-      } catch (error: any) {
-        toast({
-          title: "Error loading plan details",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data: subscriptionDetails, isLoading: subLoading } = useQuery({
+    queryKey: ['subscriptionDetails'],
+    queryFn: getSubscriptionDetails,
+    staleTime: 60000, // Consider data fresh for 1 minute
+    enabled: !!planDetails, // Only fetch subscription after plan details
+  });
 
-    fetchDetails();
-  }, [toast]);
+  const loading = planLoading || subLoading;
 
   if (loading) {
     return (
       <Card className="w-full">
         <CardContent className="p-6">
-          <div className="animate-pulse flex flex-col gap-4">
-            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -142,6 +141,6 @@ const PlanInfo = () => {
       </CardFooter>
     </Card>
   );
-};
+});
 
 export default PlanInfo;

@@ -1,4 +1,5 @@
 
+import React, { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -13,6 +14,7 @@ import { Trash2, ExternalLink, Lock, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Link {
   id: string;
@@ -30,7 +32,8 @@ interface LinkListProps {
   onDelete: () => void;
 }
 
-const LinkList = ({ links, loading, onDelete }: LinkListProps) => {
+// Memoize the component to prevent unnecessary re-renders
+const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
   const { toast } = useToast();
   
   const handleDelete = async (id: string) => {
@@ -73,8 +76,12 @@ const LinkList = ({ links, loading, onDelete }: LinkListProps) => {
   
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      <div className="space-y-2">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center space-x-4 p-2">
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -155,6 +162,6 @@ const LinkList = ({ links, loading, onDelete }: LinkListProps) => {
       </Table>
     </div>
   );
-};
+});
 
 export default LinkList;

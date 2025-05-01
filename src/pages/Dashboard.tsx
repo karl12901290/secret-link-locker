@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,38 +9,29 @@ import LinkList from "@/components/LinkList";
 import PlanInfo from "@/components/PlanInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [links, setLinks] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const fetchLinks = async () => {
-    try {
+  // Use React Query for data fetching with caching
+  const { data: links = [], isLoading, refetch } = useQuery({
+    queryKey: ['links'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("links")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setLinks(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching links",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data || [];
+    },
+    staleTime: 5000, // Consider data fresh for 5 seconds
+  });
 
-  // Set up real-time subscription to links table
+  // Set up real-time subscription to links table - using more efficient setup
   useEffect(() => {
-    fetchLinks();
-
-    // Subscribe to real-time changes
     const channel = supabase
       .channel('links-changes')
       .on(
@@ -50,34 +41,19 @@ const Dashboard = () => {
           schema: 'public', 
           table: 'links' 
         },
-        (payload) => {
-          console.log('Real-time update:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            // Add new link to state
-            setLinks(current => [payload.new, ...current]);
-          } else if (payload.eventType === 'DELETE') {
-            // Remove deleted link from state
-            setLinks(current => current.filter(link => link.id !== payload.old.id));
-          } else if (payload.eventType === 'UPDATE') {
-            // Update link in state
-            setLinks(current => 
-              current.map(link => 
-                link.id === payload.new.id ? payload.new : link
-              )
-            );
-          }
+        () => {
+          // Just refetch data when changes happen instead of managing state
+          refetch();
         }
       )
       .subscribe();
 
-    // Clean up subscription when component unmounts
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [refetch]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       window.location.href = "/";
@@ -88,15 +64,16 @@ const Dashboard = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const handleLinkSuccess = () => {
+  const handleLinkSuccess = useCallback(() => {
     setDialogOpen(false);
     toast({
       title: "Link created",
       description: "Your secure link has been created successfully.",
     });
-  };
+    refetch();
+  }, [toast, refetch]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -139,7 +116,7 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LinkList links={links} loading={loading} onDelete={() => {}} />
+            <LinkList links={links} loading={isLoading} onDelete={() => {}} />
           </CardContent>
         </Card>
       </div>
