@@ -2,16 +2,18 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import LinkForm from "@/components/LinkForm";
 import LinkList from "@/components/LinkList";
 import PlanInfo from "@/components/PlanInfo";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [links, setLinks] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchLinks = async () => {
@@ -34,8 +36,45 @@ const Dashboard = () => {
     }
   };
 
+  // Set up real-time subscription to links table
   useEffect(() => {
     fetchLinks();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('links-changes')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'links' 
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            // Add new link to state
+            setLinks(current => [payload.new, ...current]);
+          } else if (payload.eventType === 'DELETE') {
+            // Remove deleted link from state
+            setLinks(current => current.filter(link => link.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            // Update link in state
+            setLinks(current => 
+              current.map(link => 
+                link.id === payload.new.id ? payload.new : link
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription when component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleSignOut = async () => {
@@ -49,6 +88,14 @@ const Dashboard = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleLinkSuccess = () => {
+    setDialogOpen(false);
+    toast({
+      title: "Link created",
+      description: "Your secure link has been created successfully.",
+    });
   };
 
   return (
@@ -85,40 +132,38 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-            <TabsTrigger value="create">Create Link</TabsTrigger>
-            <TabsTrigger value="manage">Manage Links</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="create">
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                <CardTitle>Create a Secure Link</CardTitle>
-                <CardDescription>
-                  Upload a file and set protection options
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LinkForm onSuccess={fetchLinks} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="manage">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Secure Links</CardTitle>
-                <CardDescription>
-                  Manage and monitor all your secure links
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LinkList links={links} loading={loading} onDelete={fetchLinks} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Manage Your Links</h2>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Link
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[550px]">
+              <DialogHeader>
+                <DialogTitle>Create a Secure Link</DialogTitle>
+                <DialogDescription>
+                  Upload a file or protect a URL with our secure link service.
+                </DialogDescription>
+              </DialogHeader>
+              <LinkForm onSuccess={handleLinkSuccess} />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Secure Links</CardTitle>
+            <CardDescription>
+              Manage and monitor all your secure links
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LinkList links={links} loading={loading} onDelete={() => {}} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
