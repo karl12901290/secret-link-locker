@@ -38,11 +38,11 @@ const PlanInfo = memo(() => {
     queryKey: ['planDetails'],
     queryFn: getUserPlanDetails,
     staleTime: 60000, // Consider data fresh for 1 minute
-    onSettled: (_data, error) => {
-      if (error) {
+    meta: {
+      onError: (error: Error) => {
         toast({
           title: "Error loading plan details",
-          description: (error as Error).message,
+          description: error.message,
           variant: "destructive",
         });
       }
