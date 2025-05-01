@@ -11,22 +11,41 @@ import { Zap, Calendar, Bitcoin } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { Json } from "@/integrations/supabase/types";
+
+// Define types for the plan details data structure
+type PlanDetails = {
+  credits_balance: number;
+  plan: string;
+  billing_cycle_start: string | null;
+  links_created: number;
+  plans: {
+    name: string;
+    price: number;
+    links_limit: number;
+    max_expiration_days: number | null;
+    description: string | null;
+    features: Json | null;
+  } | null;
+}
 
 // Memoize component to prevent unnecessary re-renders
 const PlanInfo = memo(() => {
   const { toast } = useToast();
   
   // Use React Query for efficient data fetching with caching
-  const { data: planDetails, isLoading: planLoading } = useQuery({
+  const { data: planDetails, isLoading: planLoading } = useQuery<PlanDetails>({
     queryKey: ['planDetails'],
     queryFn: getUserPlanDetails,
     staleTime: 60000, // Consider data fresh for 1 minute
-    onError: (error: any) => {
-      toast({
-        title: "Error loading plan details",
-        description: error.message,
-        variant: "destructive",
-      });
+    onSettled: (_data, error) => {
+      if (error) {
+        toast({
+          title: "Error loading plan details",
+          description: (error as Error).message,
+          variant: "destructive",
+        });
+      }
     }
   });
 
