@@ -33,20 +33,14 @@ const Auth = () => {
           if (error) throw error;
           
           if (data?.user) {
-            // User is verified and authenticated, redirect to dashboard
+            // User is verified and authenticated
             toast({
               title: "Email verified",
               description: "Your email has been verified successfully.",
             });
             
-            // Check if there was a selected plan in session storage
-            const selectedPlan = sessionStorage.getItem("selectedPlan");
-            if (selectedPlan) {
-              sessionStorage.removeItem("selectedPlan");
-              navigate("/pricing");
-            } else {
-              navigate("/dashboard");
-            }
+            // Redirect to pricing page to select a plan
+            navigate("/pricing");
           }
         } catch (error: any) {
           console.error("Error verifying email:", error);
@@ -116,14 +110,8 @@ const Auth = () => {
         return;
       }
       
-      // Check if there was a selected plan in session storage
-      const selectedPlan = sessionStorage.getItem("selectedPlan");
-      if (selectedPlan) {
-        sessionStorage.removeItem("selectedPlan");
-        navigate("/pricing");
-      } else {
-        navigate("/dashboard");
-      }
+      // After successful login, redirect to pricing page to select a plan
+      navigate("/pricing");
     } catch (error: any) {
       toast({
         title: "Error",
