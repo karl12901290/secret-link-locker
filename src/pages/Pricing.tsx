@@ -11,7 +11,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, Bitcoin, Zap } from "lucide-react";
+import { Shield, CheckCircle, Bitcoin, Zap, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -203,6 +203,20 @@ const Pricing = () => {
             <Bitcoin className="h-5 w-5 text-orange-500 mr-2" />
             <span className="text-sm">We accept cryptocurrency payments via Coinbase Commerce</span>
           </div>
+          
+          {isAuthenticated && currentPlan && (
+            <div className="mt-4 flex justify-center">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => navigate("/dashboard")}
+              >
+                <ArrowLeft className="h-4 w-4" /> 
+                Back to Dashboard
+              </Button>
+            </div>
+          )}
+          
           {!isAuthenticated && (
             <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
               <p className="text-yellow-700">
@@ -268,11 +282,11 @@ const Pricing = () => {
                   {plan.features && Array.isArray(plan.features) && renderFeatures(plan.features as string[])}
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className={currentPlan === plan.name ? "flex justify-between" : ""}>
                 <Button 
                   onClick={() => handleSelectPlan(plan.name, plan.id, plan.price === 0)}
                   disabled={loading || currentPlan === plan.name}
-                  className="w-full"
+                  className={currentPlan === plan.name ? "flex-grow-0" : "w-full"}
                   variant={plan.name === "Power" ? "default" : "outline"}
                 >
                   {currentPlan === plan.name
@@ -286,6 +300,16 @@ const Pricing = () => {
                         Pay with Crypto
                       </>}
                 </Button>
+                {currentPlan === plan.name && (
+                  <Button 
+                    variant="secondary"
+                    onClick={() => navigate("/dashboard")}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> 
+                    Dashboard
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
