@@ -47,9 +47,10 @@ const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
       
       toast({
         title: "Link deleted",
-        description: "The secure link has been removed."
+        description: "The secure link has been removed. Your usage count remains unchanged."
       });
       
+      // Trigger parent component to refetch links
       onDelete();
     } catch (error: any) {
       toast({

@@ -9,11 +9,12 @@ import LinkList from "@/components/LinkList";
 import PlanInfo from "@/components/PlanInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Use React Query for data fetching with caching
   const { data: links = [], isLoading, refetch } = useQuery({
@@ -30,9 +31,10 @@ const Dashboard = () => {
     staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
-  // Set up real-time subscription to links table - using more efficient setup
+  // Set up real-time subscription to both links table and profiles table
   useEffect(() => {
-    const channel = supabase
+    // Create channel for links changes
+    const linksChannel = supabase
       .channel('links-changes')
       .on(
         'postgres_changes',
@@ -42,16 +44,35 @@ const Dashboard = () => {
           table: 'links' 
         },
         () => {
-          // Just refetch data when changes happen instead of managing state
+          // Refetch data when links changes happen
           refetch();
+        }
+      )
+      .subscribe();
+      
+    // Create channel for profiles changes (to update plan info)
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'profiles' 
+        },
+        () => {
+          // Invalidate plan details query to refresh plan info
+          queryClient.invalidateQueries({ queryKey: ['planDetails'] });
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // Clean up subscriptions when component unmounts
+      supabase.removeChannel(linksChannel);
+      supabase.removeChannel(profilesChannel);
     };
-  }, [refetch]);
+  }, [refetch, queryClient]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -73,7 +94,14 @@ const Dashboard = () => {
       description: "Your secure link has been created successfully.",
     });
     refetch();
-  }, [toast, refetch]);
+    // Also invalidate plan details to update usage count
+    queryClient.invalidateQueries({ queryKey: ['planDetails'] });
+  }, [toast, refetch, queryClient]);
+  
+  const handleLinkDelete = useCallback(() => {
+    refetch();
+    // Note: We don't invalidate plan details here since deletion no longer affects usage count
+  }, [refetch]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -116,7 +144,7 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LinkList links={links} loading={isLoading} onDelete={() => {}} />
+            <LinkList links={links} loading={isLoading} onDelete={handleLinkDelete} />
           </CardContent>
         </Card>
       </div>

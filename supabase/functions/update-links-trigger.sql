@@ -23,6 +23,6 @@ $function$;
 -- Make sure the trigger exists (if not, create it)
 DROP TRIGGER IF EXISTS update_links_created_trigger ON public.links;
 CREATE TRIGGER update_links_created_trigger
-AFTER INSERT OR DELETE ON public.links
+AFTER INSERT ON public.links
 FOR EACH ROW
 EXECUTE FUNCTION public.update_links_created();
