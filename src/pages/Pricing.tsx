@@ -191,6 +191,29 @@ const Pricing = () => {
     );
   };
 
+  // Helper function to highlight the free plan's link limit of 5
+  const highlightExplorerLimit = (plan: Plan) => {
+    if (plan.name === "Explorer" || plan.price === 0) {
+      return (
+        <div className="flex items-center">
+          <Shield className="h-4 w-4 text-primary mr-2" />
+          <span className="font-medium">Up to 5 links</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-center">
+        <Shield className="h-4 w-4 text-primary mr-2" />
+        <span>
+          {plan.links_limit === -1
+            ? "Unlimited links"
+            : `${plan.links_limit} links`}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12">
       <div className="container px-4 mx-auto">
@@ -240,6 +263,8 @@ const Pricing = () => {
               className={`flex flex-col ${
                 plan.name === "Power" 
                   ? "border-primary ring-2 ring-primary ring-opacity-50" 
+                  : plan.name === "Explorer"
+                  ? "border-amber-200" 
                   : ""
               }`}
             >
@@ -249,6 +274,11 @@ const Pricing = () => {
                   {plan.name === "Power" && (
                     <Badge variant="secondary" className="ml-2">
                       Popular
+                    </Badge>
+                  )}
+                  {plan.name === "Explorer" && (
+                    <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-200">
+                      Free
                     </Badge>
                   )}
                 </div>
@@ -261,14 +291,7 @@ const Pricing = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center">
-                    <Shield className="h-4 w-4 text-primary mr-2" />
-                    <span>
-                      {plan.links_limit === -1
-                        ? "Unlimited links"
-                        : `${plan.links_limit} links`}
-                    </span>
-                  </div>
+                  {highlightExplorerLimit(plan)}
                   
                   <div className="flex items-center">
                     <Shield className="h-4 w-4 text-primary mr-2" />
@@ -287,7 +310,7 @@ const Pricing = () => {
                   onClick={() => handleSelectPlan(plan.name, plan.id, plan.price === 0)}
                   disabled={loading || currentPlan === plan.name}
                   className={currentPlan === plan.name ? "flex-grow-0" : "w-full"}
-                  variant={plan.name === "Power" ? "default" : "outline"}
+                  variant={plan.name === "Power" ? "default" : plan.name === "Explorer" ? "secondary" : "outline"}
                 >
                   {currentPlan === plan.name
                     ? "Current Plan"

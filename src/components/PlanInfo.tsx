@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { getUserPlanDetails, getSubscriptionDetails } from "@/services/subscription";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Calendar, Bitcoin } from "lucide-react";
+import { Zap, Calendar, Bitcoin, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -86,6 +86,13 @@ const PlanInfo = memo(() => {
   const usedLinksPercent = plan?.links_limit && plan.links_limit > 0 
     ? (planDetails.links_created / plan.links_limit) * 100
     : 0;
+  
+  // Determine if the user is approaching or has reached their limit
+  const isApproachingLimit = plan?.links_limit && plan.links_limit > 0 && 
+    planDetails.links_created >= Math.floor(plan.links_limit * 0.8);
+  
+  const hasReachedLimit = plan?.links_limit && plan.links_limit > 0 && 
+    planDetails.links_created >= plan.links_limit;
 
   return (
     <Card className="w-full">
@@ -112,7 +119,24 @@ const PlanInfo = memo(() => {
                   {planDetails.links_created} / {plan.links_limit}
                 </span>
               </div>
-              <Progress value={usedLinksPercent} className="h-2" />
+              <Progress 
+                value={usedLinksPercent} 
+                className={`h-2 ${hasReachedLimit ? 'bg-red-200' : isApproachingLimit ? 'bg-amber-200' : ''}`} 
+              />
+              
+              {hasReachedLimit && (
+                <div className="flex items-center mt-2 p-2 bg-red-50 border border-red-100 rounded-md text-sm">
+                  <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+                  <span>You've reached your plan's link limit. <Link to="/pricing" className="text-primary underline">Upgrade your plan</Link> for more links.</span>
+                </div>
+              )}
+              
+              {!hasReachedLimit && isApproachingLimit && (
+                <div className="flex items-center mt-2 p-2 bg-amber-50 border border-amber-100 rounded-md text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                  <span>You're approaching your plan's link limit.</span>
+                </div>
+              )}
             </div>
           )}
 
