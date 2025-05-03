@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,15 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, FileIcon, LinkIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [url, setUrl] = useState("");
@@ -24,14 +25,39 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [password, setPassword] = useState("");
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"url" | "file">("url");
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      // Use file name as the title if title is empty
+      if (!title) {
+        setTitle(selectedFile.name);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!url) {
+    
+    // Validate based on active tab
+    if (activeTab === "url" && !url) {
       toast({
         title: "URL is required",
         description: "Please enter a URL to create a secure link",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (activeTab === "file" && !file) {
+      toast({
+        title: "File is required",
+        description: "Please select a file to upload",
         variant: "destructive",
       });
       return;
@@ -92,14 +118,37 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
         useCredit = true;
       }
       
+      let finalUrl = url;
+
+      // Handle file upload if in file mode
+      if (activeTab === "file" && file) {
+        const userId = (await supabase.auth.getUser()).data.user?.id;
+        if (!userId) throw new Error("User not authenticated");
+        
+        const fileName = `${userId}/${Date.now()}-${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("link_files")
+          .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        // Get the public URL for the uploaded file
+        const { data: publicUrlData } = supabase.storage
+          .from("link_files")
+          .getPublicUrl(fileName);
+          
+        finalUrl = publicUrlData.publicUrl;
+      }
+
       // Insert the new link
       const { data, error } = await supabase.from("links").insert([
         {
-          url,
+          url: finalUrl,
           title,
           password: password || null,
           expiration_date: expirationDate?.toISOString() || null,
           user_id: (await supabase.auth.getUser()).data.user?.id,
+          type: activeTab === "file" ? "file" : "url",
         },
       ]);
 
@@ -123,10 +172,16 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
         description: "Your secure link has been created successfully",
       });
       
+      // Reset form
       setUrl("");
       setTitle("");
       setPassword("");
       setExpirationDate(null);
+      setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      
       onSuccess();
     } catch (error: any) {
       toast({
@@ -141,16 +196,56 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <div>
-        <Label htmlFor="url">URL</Label>
-        <Input
-          type="url"
-          id="url"
-          placeholder="https://example.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-      </div>
+      <Tabs 
+        defaultValue="url" 
+        value={activeTab} 
+        onValueChange={(value) => setActiveTab(value as "url" | "file")} 
+        className="w-full mb-4"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="url">
+            <LinkIcon className="mr-2 h-4 w-4" />
+            Create URL Link
+          </TabsTrigger>
+          <TabsTrigger value="file">
+            <FileIcon className="mr-2 h-4 w-4" />
+            Upload File
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="url" className="mt-4">
+          <div>
+            <Label htmlFor="url">URL</Label>
+            <Input
+              type="url"
+              id="url"
+              placeholder="https://example.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="file" className="mt-4">
+          <div>
+            <Label htmlFor="file">File</Label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              id="file"
+              onChange={handleFileChange}
+              className="mt-1"
+            />
+            {file && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+              </p>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+      
       <div>
         <Label htmlFor="title">Title</Label>
         <Input
@@ -159,8 +254,10 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
           placeholder="My Secure Link"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className="mt-1"
         />
       </div>
+      
       <div>
         <Label htmlFor="password">Password (optional)</Label>
         <Input
@@ -169,8 +266,10 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="mt-1"
         />
       </div>
+      
       <div>
         <Label>Expiration Date (optional)</Label>
         <Popover>
@@ -178,7 +277,7 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
             <Button
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal mt-1",
                 !expirationDate && "text-muted-foreground"
               )}
             >
@@ -191,15 +290,15 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
               mode="single"
               selected={expirationDate}
               onSelect={setExpirationDate}
-              disabled={(date) =>
-                date < new Date()
-              }
+              disabled={(date) => date < new Date()}
               initialFocus
+              className={cn("p-3 pointer-events-auto")}
             />
           </PopoverContent>
         </Popover>
       </div>
-      <Button type="submit" disabled={isLoading}>
+      
+      <Button type="submit" disabled={isLoading} className="mt-2">
         {isLoading ? "Creating..." : "Create Link"}
       </Button>
     </form>
