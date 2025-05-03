@@ -27,7 +27,7 @@ const Index = () => {
       <header className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <h2 className="text-2xl font-bold text-primary">SecretLinkLocker</h2>
+            <h2 className="text-2xl font-bold text-primary">SnapLink</h2>
           </div>
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
@@ -83,7 +83,7 @@ const Index = () => {
         <div className="flex flex-col lg:flex-row items-center justify-between py-16 lg:py-24 gap-12">
           <div className="max-w-xl">
             <h1 className="text-4xl font-bold text-primary mb-6 md:text-5xl lg:text-6xl leading-tight">
-              Share Files Securely with <span className="text-blue-600">SecretLinkLocker</span>
+              Share Files Securely with <span className="text-blue-600">SnapLink</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Password protection, expiration dates, and detailed analytics for your shared links.
@@ -221,7 +221,7 @@ const Index = () => {
         <div className="py-16 bg-white rounded-2xl shadow-sm my-20 px-6">
           <h2 className="text-3xl font-bold text-center mb-4">What Our Users Say</h2>
           <p className="text-xl text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-            Thousands of users trust SecretLinkLocker to share their content securely.
+            Thousands of users trust SnapLink to share their content securely.
           </p>
           
           <Carousel className="mx-auto max-w-4xl">
@@ -229,7 +229,7 @@ const Index = () => {
               <CarouselItem>
                 <div className="p-6">
                   <p className="text-lg italic mb-6">
-                    "SecretLinkLocker has been a game-changer for our team. We needed a secure way to share 
+                    "SnapLink has been a game-changer for our team. We needed a secure way to share 
                     sensitive documents with clients, and this platform delivered everything we needed."
                   </p>
                   <div className="flex items-center gap-4">
@@ -263,7 +263,7 @@ const Index = () => {
               <CarouselItem>
                 <div className="p-6">
                   <p className="text-lg italic mb-6">
-                    "I've tried many similar services, but SecretLinkLocker offers the perfect balance of 
+                    "I've tried many similar services, but SnapLink offers the perfect balance of 
                     security features and ease of use. The free plan is generous enough for my needs."
                   </p>
                   <div className="flex items-center gap-4">
@@ -365,7 +365,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-lg font-bold mb-4">SecretLinkLocker</h3>
+              <h3 className="text-lg font-bold mb-4">SnapLink</h3>
               <p className="text-gray-600 mb-4">
                 Secure file sharing with password protection and expiration dates.
               </p>
@@ -395,7 +395,7 @@ const Index = () => {
             </div>
           </div>
           <div className="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">
-            <p>&copy; {new Date().getFullYear()} SecretLinkLocker. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} SnapLink. All rights reserved.</p>
           </div>
         </div>
       </footer>

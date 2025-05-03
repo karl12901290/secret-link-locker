@@ -107,7 +107,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">SecretLinkLocker Dashboard</h1>
+          <h1 className="text-3xl font-bold">SnapLink Dashboard</h1>
           <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
         </div>
 
