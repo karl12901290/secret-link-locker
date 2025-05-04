@@ -16,6 +16,32 @@ const Dashboard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Create storage bucket for files if it doesn't exist
+  useEffect(() => {
+    const initStorage = async () => {
+      try {
+        // Check if the bucket exists first
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(bucket => bucket.name === 'link_files');
+        
+        if (!bucketExists) {
+          // Call the edge function to create the bucket
+          const { error } = await supabase.functions.invoke('create-bucket');
+          
+          if (error) {
+            console.error('Error creating storage bucket:', error);
+          } else {
+            console.log('Storage bucket created successfully');
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing storage:', error);
+      }
+    };
+    
+    initStorage();
+  }, []);
+  
   // Use React Query for data fetching with caching
   const { data: links = [], isLoading, refetch } = useQuery({
     queryKey: ['links'],

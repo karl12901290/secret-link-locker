@@ -140,7 +140,7 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
         finalUrl = publicUrlData.publicUrl;
       }
 
-      // Insert the new link
+      // Insert the new link - removing the type field since it's not in the schema
       const { data, error } = await supabase.from("links").insert([
         {
           url: finalUrl,
@@ -148,7 +148,7 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
           password: password || null,
           expiration_date: expirationDate?.toISOString() || null,
           user_id: (await supabase.auth.getUser()).data.user?.id,
-          type: activeTab === "file" ? "file" : "url",
+          // Removing the type field since it's causing an error
         },
       ]);
 
@@ -292,7 +292,6 @@ const LinkForm = ({ onSuccess }: { onSuccess: () => void }) => {
               onSelect={setExpirationDate}
               disabled={(date) => date < new Date()}
               initialFocus
-              className={cn("p-3 pointer-events-auto")}
             />
           </PopoverContent>
         </Popover>
