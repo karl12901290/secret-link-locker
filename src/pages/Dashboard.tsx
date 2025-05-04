@@ -16,30 +16,31 @@ const Dashboard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Create storage bucket for files if it doesn't exist
+  // Initialize buckets and setup permissions
   useEffect(() => {
-    const initStorage = async () => {
+    const setupPermissions = async () => {
       try {
-        // Check if the bucket exists first
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = buckets?.some(bucket => bucket.name === 'link_files');
+        // Check if user is authenticated first
+        const { data: userData, error: authError } = await supabase.auth.getUser();
+        if (authError || !userData.user) {
+          console.log('User not authenticated yet, skipping setup');
+          return;
+        }
+
+        // Call setup-permissions edge function to set up storage and RLS policies
+        const { error } = await supabase.functions.invoke('setup-permissions');
         
-        if (!bucketExists) {
-          // Call the edge function to create the bucket
-          const { error } = await supabase.functions.invoke('create-bucket');
-          
-          if (error) {
-            console.error('Error creating storage bucket:', error);
-          } else {
-            console.log('Storage bucket created successfully');
-          }
+        if (error) {
+          console.error('Error setting up permissions:', error);
+        } else {
+          console.log('Storage and permissions setup completed successfully');
         }
       } catch (error) {
-        console.error('Error initializing storage:', error);
+        console.error('Error initializing storage and permissions:', error);
       }
     };
     
-    initStorage();
+    setupPermissions();
   }, []);
   
   // Use React Query for data fetching with caching

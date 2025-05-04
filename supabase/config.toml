@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.create-bucket]
 verify_jwt = false
+
+[functions.setup-permissions]
+verify_jwt = false

@@ -58,6 +58,12 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
     setIsLoading(true);
 
     try {
+      // Check if the user is authenticated
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData.user) {
+        throw new Error("You must be logged in to create links");
+      }
+
       // Check user plan first to ensure they have not reached their limit
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -67,7 +73,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
             links_limit
           )
         `)
-        .eq("id", (await supabase.auth.getUser()).data.user?.id || '')
+        .eq("id", userData.user.id)
         .single();
       
       if (profileError) throw profileError;
@@ -86,10 +92,10 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
       }
       
       // If user has credits, they can create links even if they've reached their plan limit
-      const { data: userData } = await supabase
+      const { data: userData2 } = await supabase
         .from("profiles")
         .select("credits_balance")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id || '')
+        .eq("id", userData.user.id)
         .single();
         
       // If user has reached their plan limit but has credits, use a credit
@@ -97,7 +103,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
       if (profileData.plans && 
           profileData.plans.links_limit >= 0 && 
           profileData.links_created >= profileData.plans.links_limit && 
-          userData && userData.credits_balance > 0) {
+          userData2 && userData2.credits_balance > 0) {
         useCredit = true;
       }
       
@@ -105,7 +111,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
 
       // Handle file upload if in file mode
       if (activeTab === "file" && file) {
-        const userId = (await supabase.auth.getUser()).data.user?.id;
+        const userId = userData.user.id;
         if (!userId) throw new Error("User not authenticated");
         
         const fileName = `${userId}/${Date.now()}-${file.name}`;
@@ -130,9 +136,9 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
           title,
           password: password || null,
           expiration_date: expirationDate?.toISOString() || null,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userData.user.id,
         },
-      ]);
+      ]).select();
 
       if (error) throw error;
       
@@ -140,8 +146,8 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
       if (useCredit) {
         const { error: creditError } = await supabase
           .from("profiles")
-          .update({ credits_balance: userData.credits_balance - 1 })
-          .eq("id", (await supabase.auth.getUser()).data.user?.id || '');
+          .update({ credits_balance: userData2.credits_balance - 1 })
+          .eq("id", userData.user.id);
           
         if (creditError) {
           console.error("Error updating credit balance:", creditError);
@@ -158,6 +164,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
       resetForm();
       onSuccess();
     } catch (error: any) {
+      console.error("Link creation error:", error);
       toast({
         title: "Error creating link",
         description: error.message,

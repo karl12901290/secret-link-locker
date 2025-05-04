@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -10,11 +10,12 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, ExternalLink, Lock, Clock } from "lucide-react";
+import { Trash2, ExternalLink, Lock, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Link {
   id: string;
@@ -35,8 +36,32 @@ interface LinkListProps {
 // Memoize the component to prevent unnecessary re-renders
 const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
   const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Auth check error:", error);
+        setIsAuthenticated(false);
+        return;
+      }
+      setIsAuthenticated(!!data.user);
+    };
+    
+    checkAuth();
+  }, []);
+
   const handleDelete = async (id: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to delete links",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from("links")
@@ -75,6 +100,18 @@ const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
     return new Date(date) < new Date();
   };
   
+  if (isAuthenticated === false) {
+    return (
+      <Alert variant="destructive" className="my-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Authentication Error</AlertTitle>
+        <AlertDescription>
+          You must be logged in to view and manage your links.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
   if (loading) {
     return (
       <div className="space-y-2">
@@ -112,7 +149,7 @@ const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
             <TableRow key={link.id}>
               <TableCell className="font-medium">{link.title}</TableCell>
               <TableCell>
-                <div className="flex space-x-1">
+                <div className="flex flex-wrap gap-1">
                   {link.password && (
                     <Badge variant="outline" className="flex items-center space-x-1">
                       <Lock className="h-3 w-3" />

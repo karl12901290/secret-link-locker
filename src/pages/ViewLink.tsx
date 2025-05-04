@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Lock, ExternalLink, Clock } from "lucide-react";
+import { Lock, ExternalLink, Clock, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface LinkData {
   id: string;
@@ -25,11 +27,17 @@ const ViewLink = () => {
   const [verifying, setVerifying] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchLink = async () => {
-      if (!id) return;
+      if (!id) {
+        setError("Invalid link ID");
+        setLoading(false);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
@@ -38,7 +46,16 @@ const ViewLink = () => {
           .eq("id", id)
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching link:", error);
+          if (error.code === "PGRST116") {
+            setError("This link doesn't exist or has been removed.");
+          } else {
+            setError("Error loading link. Please try again later.");
+          }
+          setLoading(false);
+          return;
+        }
         
         if (data) {
           setLink(data);
@@ -51,14 +68,14 @@ const ViewLink = () => {
             setAuthenticated(true);
             incrementViews();
           }
+          setLoading(false);
+        } else {
+          setError("Link not found");
+          setLoading(false);
         }
       } catch (error: any) {
-        toast({
-          title: "Error loading link",
-          description: "This link doesn't exist or has been removed.",
-          variant: "destructive"
-        });
-      } finally {
+        console.error("Error in fetchLink:", error);
+        setError("An unexpected error occurred. Please try again later.");
         setLoading(false);
       }
     };
@@ -67,12 +84,12 @@ const ViewLink = () => {
   }, [id]);
   
   const incrementViews = async () => {
-    if (!id) return;
+    if (!id || !link) return;
     
     try {
       await supabase
         .from("links")
-        .update({ views: link!.views + 1 })
+        .update({ views: link.views + 1 })
         .eq("id", id);
     } catch (error) {
       console.error("Failed to increment views:", error);
@@ -123,6 +140,29 @@ const ViewLink = () => {
     );
   }
   
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-center">
+              <AlertTriangle className="mr-2 h-6 w-6 text-destructive" />
+              Link Error
+            </CardTitle>
+            <CardDescription>
+              {error}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex justify-center">
+            <Button variant="secondary" onClick={() => navigate("/")}>
+              Return Home
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+  
   if (!link) {
     return (
       <div className="flex h-screen items-center justify-center p-4">
@@ -134,7 +174,7 @@ const ViewLink = () => {
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex justify-center">
-            <Button variant="secondary" onClick={() => window.location.href = "/"}>
+            <Button variant="secondary" onClick={() => navigate("/")}>
               Return Home
             </Button>
           </CardFooter>
@@ -157,7 +197,7 @@ const ViewLink = () => {
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex justify-center">
-            <Button variant="secondary" onClick={() => window.location.href = "/"}>
+            <Button variant="secondary" onClick={() => navigate("/")}>
               Return Home
             </Button>
           </CardFooter>
