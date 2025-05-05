@@ -21,34 +21,36 @@ serve(async (req) => {
 
     // 1. Set up storage bucket and policies
     try {
-      // Create bucket if it doesn't exist
+      // First make sure the bucket exists with proper settings
       const { error: bucketError } = await supabaseClient
         .storage
         .createBucket('link_files', { 
-          public: true,
+          public: true, 
           fileSizeLimit: 50 * 1024 * 1024, // 50MB
+          allowedMimeTypes: ['*/*'] // Allow all file types
         });
 
       if (bucketError && bucketError.message !== "The resource already exists") {
         console.error('Error creating bucket:', bucketError);
-        return new Response(
-          JSON.stringify({ error: bucketError.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        throw bucketError;
       }
       console.log('Bucket created or already exists');
       
-      // Set up storage policies
+      // Call the SQL function to set up storage policies
       const { error: storageError } = await supabaseClient.rpc('setup_storage_policies');
       
       if (storageError) {
         console.error('Error setting storage policies:', storageError);
-        // Continue even if there was an error setting storage policies
+        throw storageError;
       } else {
         console.log('Storage policies set up successfully');
       }
     } catch (storageError) {
       console.error('Error setting up storage:', storageError);
+      return new Response(
+        JSON.stringify({ error: `Error setting up storage: ${storageError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     // 2. Set up RLS policies for the links table

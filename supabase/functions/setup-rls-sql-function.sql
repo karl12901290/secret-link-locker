@@ -26,47 +26,63 @@ BEGIN
       NULL;
   END;
   
-  -- Allow any authenticated user to upload files to the link_files bucket
-  BEGIN
-    INSERT INTO storage.policies (name, bucket_id, definition)
-    VALUES (
-      'Allow authenticated users to upload files',
-      'link_files',
-      '(auth.role() = ''authenticated'')'
-    );
-  EXCEPTION
-    WHEN unique_violation THEN
-      -- Policy already exists, that's fine
-      NULL;
-  END;
-  
-  -- Allow files to be publicly accessible (since they're secured by unique names)
+  -- Add policy for INSERT operations
   BEGIN
     INSERT INTO storage.policies (name, bucket_id, definition, operation)
     VALUES (
-      'Allow public read access to files',
+      'Allow authenticated users to upload files',
+      'link_files',
+      'auth.role() = ''authenticated''',
+      'INSERT'
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Policy might already exist, continue
+      NULL;
+  END;
+  
+  -- Add policy for SELECT operations (public access)
+  BEGIN
+    INSERT INTO storage.policies (name, bucket_id, definition, operation)
+    VALUES (
+      'Allow public access to files',
       'link_files',
       'true',
       'SELECT'
     );
   EXCEPTION
-    WHEN unique_violation THEN
-      -- Policy already exists, that's fine
+    WHEN OTHERS THEN
+      -- Policy might already exist, continue
       NULL;
   END;
-
-  -- Add INSERT operation policy explicitly
+  
+  -- Add policy for UPDATE operations
   BEGIN
     INSERT INTO storage.policies (name, bucket_id, definition, operation)
     VALUES (
-      'Allow authenticated users to insert files',
+      'Allow authenticated users to update own files',
       'link_files',
-      '(auth.role() = ''authenticated'')',
-      'INSERT'
+      'auth.role() = ''authenticated''',
+      'UPDATE'
     );
   EXCEPTION
-    WHEN unique_violation THEN
-      -- Policy already exists, that's fine
+    WHEN OTHERS THEN
+      -- Policy might already exist, continue
+      NULL;
+  END;
+  
+  -- Add policy for DELETE operations
+  BEGIN
+    INSERT INTO storage.policies (name, bucket_id, definition, operation)
+    VALUES (
+      'Allow authenticated users to delete own files',
+      'link_files',
+      'auth.role() = ''authenticated''',
+      'DELETE'
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Policy might already exist, continue
       NULL;
   END;
 END;
