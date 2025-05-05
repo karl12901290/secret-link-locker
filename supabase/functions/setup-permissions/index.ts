@@ -36,6 +36,14 @@ serve(async (req) => {
         );
       }
       console.log('Bucket created or already exists');
+      
+      // Set bucket policies to allow authenticated users to upload
+      const { error: policyError } = await supabaseClient.rpc('setup_storage_policies');
+      
+      if (policyError) {
+        console.error('Error setting bucket policies:', policyError);
+        // Continue even if there was an error setting bucket policies
+      }
     } catch (bucketError) {
       // If bucket already exists, that's fine
       if (bucketError.message !== "The resource already exists") {

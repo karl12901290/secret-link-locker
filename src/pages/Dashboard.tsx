@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [setupComplete, setSetupComplete] = useState(false);
+  const [setupInProgress, setSetupInProgress] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -27,6 +28,8 @@ const Dashboard = () => {
           console.log('User not authenticated yet, skipping setup');
           return;
         }
+        
+        setSetupInProgress(true);
 
         // Call setup-permissions edge function to set up storage and RLS policies
         const { data, error } = await supabase.functions.invoke('setup-permissions');
@@ -53,11 +56,15 @@ const Dashboard = () => {
           description: "There was a problem setting up permissions. Please try again.",
           variant: "destructive"
         });
+      } finally {
+        setSetupInProgress(false);
       }
     };
     
-    setupPermissions();
-  }, [toast]);
+    if (!setupComplete && !setupInProgress) {
+      setupPermissions();
+    }
+  }, [toast, setupComplete, setupInProgress]);
   
   // Use React Query for data fetching with caching
   const { data: links = [], isLoading, refetch } = useQuery({
