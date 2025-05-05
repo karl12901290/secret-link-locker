@@ -19,8 +19,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Set up the link_files bucket if it doesn't exist
+    // 1. Set up storage bucket and policies
     try {
+      // Create bucket if it doesn't exist
       const { error: bucketError } = await supabaseClient
         .storage
         .createBucket('link_files', { 
@@ -37,18 +38,17 @@ serve(async (req) => {
       }
       console.log('Bucket created or already exists');
       
-      // Set bucket policies to allow authenticated users to upload
-      const { error: policyError } = await supabaseClient.rpc('setup_storage_policies');
+      // Set up storage policies
+      const { error: storageError } = await supabaseClient.rpc('setup_storage_policies');
       
-      if (policyError) {
-        console.error('Error setting bucket policies:', policyError);
-        // Continue even if there was an error setting bucket policies
+      if (storageError) {
+        console.error('Error setting storage policies:', storageError);
+        // Continue even if there was an error setting storage policies
+      } else {
+        console.log('Storage policies set up successfully');
       }
-    } catch (bucketError) {
-      // If bucket already exists, that's fine
-      if (bucketError.message !== "The resource already exists") {
-        console.error('Error creating bucket:', bucketError);
-      }
+    } catch (storageError) {
+      console.error('Error setting up storage:', storageError);
     }
 
     // 2. Set up RLS policies for the links table

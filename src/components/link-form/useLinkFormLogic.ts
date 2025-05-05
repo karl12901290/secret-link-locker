@@ -57,6 +57,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setUploadProgress(0);
 
     try {
       // Check if the user is authenticated
@@ -118,7 +119,14 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
         const userId = userData.user.id;
         if (!userId) throw new Error("User not authenticated");
         
-        const fileName = `${userId}/${Date.now()}-${file.name}`;
+        // Ensure setup-permissions has been run first
+        const setupResponse = await supabase.functions.invoke('setup-permissions');
+        if (setupResponse.error) {
+          console.warn("Warning: Setup permissions response:", setupResponse.error);
+          // Continue anyway - the bucket might already be set up
+        }
+        
+        const fileName = `${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         
         // Add toast notification for upload start
         toast({
@@ -126,37 +134,43 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
           description: "Your file is being uploaded...",
         });
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("link_files")
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-        
-        if (uploadError) {
-          console.error("File upload error:", uploadError);
-          throw new Error(`Error uploading file: ${uploadError.message}`);
-        }
-        
-        if (!uploadData) {
-          throw new Error("File upload failed with no error message");
-        }
-        
-        // Get the public URL for the uploaded file
-        const { data: publicUrlData } = supabase.storage
-          .from("link_files")
-          .getPublicUrl(fileName);
+        // Try the upload with a more robust approach
+        try {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("link_files")
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
           
-        if (!publicUrlData || !publicUrlData.publicUrl) {
-          throw new Error("Could not get public URL for uploaded file");
+          if (uploadError) {
+            console.error("File upload error:", uploadError);
+            throw new Error(`Error uploading file: ${uploadError.message}`);
+          }
+          
+          if (!uploadData) {
+            throw new Error("File upload failed with no error message");
+          }
+          
+          // Get the public URL for the uploaded file
+          const { data: publicUrlData } = supabase.storage
+            .from("link_files")
+            .getPublicUrl(fileName);
+            
+          if (!publicUrlData || !publicUrlData.publicUrl) {
+            throw new Error("Could not get public URL for uploaded file");
+          }
+          
+          finalUrl = publicUrlData.publicUrl;
+          
+          toast({
+            title: "File uploaded",
+            description: "Your file has been uploaded successfully",
+          });
+        } catch (uploadError: any) {
+          console.error("Upload error:", uploadError);
+          throw new Error(`File upload failed: ${uploadError.message}`);
         }
-        
-        finalUrl = publicUrlData.publicUrl;
-        
-        toast({
-          title: "File uploaded",
-          description: "Your file has been uploaded successfully",
-        });
       }
 
       // Insert the new link
