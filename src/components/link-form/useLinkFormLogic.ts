@@ -15,6 +15,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"url" | "file">("url");
   const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -76,7 +77,10 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
         .eq("id", userData.user.id)
         .single();
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error fetching profile data:", profileError);
+        throw new Error("Error checking your plan details. Please try again.");
+      }
       
       // Check if user has reached their limit
       if (profileData.plans && 
@@ -115,18 +119,44 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
         if (!userId) throw new Error("User not authenticated");
         
         const fileName = `${userId}/${Date.now()}-${file.name}`;
+        
+        // Add toast notification for upload start
+        toast({
+          title: "Uploading file",
+          description: "Your file is being uploaded...",
+        });
+        
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("link_files")
-          .upload(fileName, file);
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
         
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("File upload error:", uploadError);
+          throw new Error(`Error uploading file: ${uploadError.message}`);
+        }
+        
+        if (!uploadData) {
+          throw new Error("File upload failed with no error message");
+        }
         
         // Get the public URL for the uploaded file
         const { data: publicUrlData } = supabase.storage
           .from("link_files")
           .getPublicUrl(fileName);
           
+        if (!publicUrlData || !publicUrlData.publicUrl) {
+          throw new Error("Could not get public URL for uploaded file");
+        }
+        
         finalUrl = publicUrlData.publicUrl;
+        
+        toast({
+          title: "File uploaded",
+          description: "Your file has been uploaded successfully",
+        });
       }
 
       // Insert the new link
@@ -140,7 +170,14 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
         },
       ]).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Link insertion error:", error);
+        throw new Error(`Error creating link: ${error.message}`);
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error("Link was not created");
+      }
       
       // If using a credit, decrement the credit balance
       if (useCredit) {
@@ -167,11 +204,12 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
       console.error("Link creation error:", error);
       toast({
         title: "Error creating link",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -181,6 +219,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
     setPassword("");
     setExpirationDate(null);
     setFile(null);
+    setUploadProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -201,6 +240,7 @@ export const useLinkFormLogic = ({ onSuccess }: UseLinkFormLogicProps) => {
     file,
     setFile,
     fileInputRef,
+    uploadProgress,
     handleSubmit,
   };
 };

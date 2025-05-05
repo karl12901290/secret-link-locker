@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -28,20 +29,35 @@ const Dashboard = () => {
         }
 
         // Call setup-permissions edge function to set up storage and RLS policies
-        const { error } = await supabase.functions.invoke('setup-permissions');
+        const { data, error } = await supabase.functions.invoke('setup-permissions');
         
         if (error) {
           console.error('Error setting up permissions:', error);
+          toast({
+            title: "Setup Error",
+            description: "There was a problem setting up permissions. Please try again.",
+            variant: "destructive"
+          });
         } else {
-          console.log('Storage and permissions setup completed successfully');
+          console.log('Storage and permissions setup completed successfully:', data);
+          setSetupComplete(true);
+          toast({
+            title: "Setup Complete",
+            description: "Storage and permissions setup completed successfully.",
+          });
         }
       } catch (error) {
         console.error('Error initializing storage and permissions:', error);
+        toast({
+          title: "Setup Error",
+          description: "There was a problem setting up permissions. Please try again.",
+          variant: "destructive"
+        });
       }
     };
     
     setupPermissions();
-  }, []);
+  }, [toast]);
   
   // Use React Query for data fetching with caching
   const { data: links = [], isLoading, refetch } = useQuery({
@@ -52,7 +68,10 @@ const Dashboard = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching links:", error);
+        throw error;
+      }
       return data || [];
     },
     staleTime: 5000, // Consider data fresh for 5 seconds
@@ -70,8 +89,8 @@ const Dashboard = () => {
           schema: 'public', 
           table: 'links' 
         },
-        () => {
-          // Refetch data when links changes happen
+        (payload) => {
+          console.log('Links table changed:', payload);
           refetch();
         }
       )
@@ -87,7 +106,8 @@ const Dashboard = () => {
           schema: 'public', 
           table: 'profiles' 
         },
-        () => {
+        (payload) => {
+          console.log('Profiles table changed:', payload);
           // Invalidate plan details query to refresh plan info
           queryClient.invalidateQueries({ queryKey: ['planDetails'] });
         }

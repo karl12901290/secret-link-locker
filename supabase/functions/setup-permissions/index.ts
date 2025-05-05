@@ -35,6 +35,7 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
+      console.log('Bucket created or already exists');
     } catch (bucketError) {
       // If bucket already exists, that's fine
       if (bucketError.message !== "The resource already exists") {
@@ -43,16 +44,15 @@ serve(async (req) => {
     }
 
     // 2. Set up RLS policies for the links table
-    const createPolicies = async () => {
+    try {
       const { error } = await supabaseClient.rpc('setup_rls_policies');
       
       if (error) {
+        console.error('Error setting up RLS policies:', error);
         throw error;
       }
-    };
-
-    try {
-      await createPolicies();
+      
+      console.log('RLS policies setup completed successfully');
     } catch (error) {
       console.error('Error setting up RLS policies:', error);
       return new Response(
@@ -62,7 +62,11 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: 'Setup completed successfully' }),
+      JSON.stringify({ 
+        message: 'Setup completed successfully',
+        bucket: 'link_files', 
+        rls: 'policies applied'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {

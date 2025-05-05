@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Lock, ExternalLink, Clock, AlertTriangle } from "lucide-react";
+import { Lock, ExternalLink, Clock, AlertTriangle, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface LinkData {
@@ -30,6 +30,7 @@ const ViewLink = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isFile, setIsFile] = useState(false);
 
   useEffect(() => {
     const fetchLink = async () => {
@@ -60,13 +61,18 @@ const ViewLink = () => {
         if (data) {
           setLink(data);
           
+          // Check if URL is a file from the link_files bucket
+          if (data.url && data.url.includes('link_files')) {
+            setIsFile(true);
+          }
+          
           if (data.expiration_date && new Date(data.expiration_date) < new Date()) {
             setExpired(true);
           }
           
           if (!data.password) {
             setAuthenticated(true);
-            incrementViews();
+            incrementViews(data.id);
           }
           setLoading(false);
         } else {
@@ -83,14 +89,19 @@ const ViewLink = () => {
     fetchLink();
   }, [id]);
   
-  const incrementViews = async () => {
-    if (!id || !link) return;
-    
+  const incrementViews = async (linkId: string) => {
     try {
-      await supabase
-        .from("links")
-        .update({ views: link.views + 1 })
-        .eq("id", id);
+      // Using the increment_link_views function if it exists
+      const { error } = await supabase.rpc('increment_link_views', { link_id: linkId });
+      
+      if (error) {
+        console.error("Failed to increment views using RPC:", error);
+        // Fallback to direct update if RPC fails
+        await supabase
+          .from("links")
+          .update({ views: (link?.views || 0) + 1 })
+          .eq("id", linkId);
+      }
     } catch (error) {
       console.error("Failed to increment views:", error);
     }
@@ -106,7 +117,7 @@ const ViewLink = () => {
     try {
       if (password === link.password) {
         setAuthenticated(true);
-        incrementViews();
+        incrementViews(link.id);
         toast({
           title: "Password correct",
           description: "You can now access the content."
@@ -121,14 +132,15 @@ const ViewLink = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An error occurred while verifying the password.",
         variant: "destructive"
       });
     } finally {
       setVerifying(false);
     }
   };
-  
+
+  // Display loading state
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -140,6 +152,7 @@ const ViewLink = () => {
     );
   }
   
+  // Display error state
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center p-4">
@@ -163,6 +176,7 @@ const ViewLink = () => {
     );
   }
   
+  // Display not found state
   if (!link) {
     return (
       <div className="flex h-screen items-center justify-center p-4">
@@ -183,6 +197,7 @@ const ViewLink = () => {
     );
   }
   
+  // Display expired state
   if (expired) {
     return (
       <div className="flex h-screen items-center justify-center p-4">
@@ -206,6 +221,7 @@ const ViewLink = () => {
     );
   }
   
+  // Display password input state
   if (!authenticated && link.password) {
     return (
       <div className="flex h-screen items-center justify-center p-4 bg-gradient-to-b from-gray-50 to-gray-100">
@@ -246,6 +262,7 @@ const ViewLink = () => {
     );
   }
   
+  // Display content access state
   return (
     <div className="flex h-screen items-center justify-center p-4 bg-gradient-to-b from-gray-50 to-gray-100">
       <Card className="w-full max-w-md">
@@ -259,8 +276,17 @@ const ViewLink = () => {
           <p className="mb-6 text-muted-foreground">Click the button below to access the content</p>
           <Button asChild size="lg">
             <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Open Content
+              {isFile ? (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  View File
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Content
+                </>
+              )}
             </a>
           </Button>
         </CardContent>
