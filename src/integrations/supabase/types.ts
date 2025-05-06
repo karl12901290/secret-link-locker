@@ -181,6 +181,14 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      setup_rls_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      setup_storage_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

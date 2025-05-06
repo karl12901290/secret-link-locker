@@ -10,9 +10,12 @@ import PlanInfo from "@/components/PlanInfo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import FileUploadForm from "@/components/FileUploadForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"link" | "file">("link");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -103,6 +106,16 @@ const Dashboard = () => {
     // Note: We don't invalidate plan details here since deletion no longer affects usage count
   }, [refetch]);
 
+  const handleFileUploadSuccess = useCallback(() => {
+    setDialogOpen(false);
+    toast({
+      title: "File uploaded",
+      description: "Your file has been uploaded and a secure link has been created.",
+    });
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['planDetails'] });
+  }, [toast, refetch, queryClient]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -131,7 +144,19 @@ const Dashboard = () => {
                   Upload a file or protect a URL with our secure link service.
                 </DialogDescription>
               </DialogHeader>
-              <LinkForm onSuccess={handleLinkSuccess} />
+              
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "link" | "file")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="link">Protect URL</TabsTrigger>
+                  <TabsTrigger value="file">Upload File</TabsTrigger>
+                </TabsList>
+                <TabsContent value="link">
+                  <LinkForm onSuccess={handleLinkSuccess} />
+                </TabsContent>
+                <TabsContent value="file">
+                  <FileUploadForm onSuccess={handleFileUploadSuccess} />
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>

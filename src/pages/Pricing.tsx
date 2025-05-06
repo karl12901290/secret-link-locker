@@ -11,7 +11,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, Bitcoin, Zap, ArrowLeft } from "lucide-react";
+import { Shield, CheckCircle, Bitcoin, Zap, ArrowLeft, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -214,6 +214,19 @@ const Pricing = () => {
     );
   };
 
+  const renderFileUploadFeature = (plan: Plan) => {
+    const hasFileUpload = plan.name !== "Explorer" && plan.price > 0;
+    
+    return (
+      <div className="flex items-center">
+        <Upload className="h-4 w-4 mr-2" style={{ color: hasFileUpload ? '#22c55e' : '#9ca3af' }} />
+        <span className={hasFileUpload ? '' : 'text-gray-400 line-through'}>
+          File uploads
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12">
       <div className="container px-4 mx-auto">
@@ -302,14 +315,16 @@ const Pricing = () => {
                     </span>
                   </div>
                   
+                  {renderFileUploadFeature(plan)}
+                  
                   {plan.features && Array.isArray(plan.features) && renderFeatures(plan.features as string[])}
                 </div>
               </CardContent>
-              <CardFooter className={currentPlan === plan.name ? "flex justify-between" : ""}>
+              <CardFooter>
                 <Button 
                   onClick={() => handleSelectPlan(plan.name, plan.id, plan.price === 0)}
                   disabled={loading || currentPlan === plan.name}
-                  className={currentPlan === plan.name ? "flex-grow-0" : "w-full"}
+                  className="w-full"
                   variant={plan.name === "Power" ? "default" : plan.name === "Explorer" ? "secondary" : "outline"}
                 >
                   {currentPlan === plan.name
@@ -323,16 +338,6 @@ const Pricing = () => {
                         Pay with Crypto
                       </>}
                 </Button>
-                {currentPlan === plan.name && (
-                  <Button 
-                    variant="secondary"
-                    onClick={() => navigate("/dashboard")}
-                    className="flex items-center gap-2"
-                  >
-                    <ArrowLeft className="h-4 w-4" /> 
-                    Dashboard
-                  </Button>
-                )}
               </CardFooter>
             </Card>
           ))}

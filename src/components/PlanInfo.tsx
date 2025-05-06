@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { getUserPlanDetails, getSubscriptionDetails } from "@/services/subscription";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Calendar, Bitcoin, AlertTriangle } from "lucide-react";
+import { Zap, Calendar, Bitcoin, AlertTriangle, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -58,6 +58,25 @@ const PlanInfo = memo(() => {
 
   const loading = planLoading || subLoading;
 
+  // Initialize storage bucket
+  useEffect(() => {
+    const setupStorage = async () => {
+      try {
+        const response = await fetch('/functions/v1/setup-storage', {
+          method: 'POST',
+        });
+        const data = await response.json();
+        if (!data.success) {
+          console.error('Error setting up storage:', data.error);
+        }
+      } catch (error) {
+        console.error('Failed to initialize storage:', error);
+      }
+    };
+
+    setupStorage();
+  }, []);
+
   if (loading) {
     return (
       <Card className="w-full">
@@ -93,6 +112,8 @@ const PlanInfo = memo(() => {
   
   const hasReachedLimit = plan?.links_limit && plan.links_limit > 0 && 
     planDetails.links_created >= plan.links_limit;
+
+  const canUploadFiles = plan && plan.price > 0;
 
   return (
     <Card className="w-full">
@@ -169,6 +190,15 @@ const PlanInfo = memo(() => {
               <span>Payment method: Cryptocurrency</span>
             </div>
           )}
+          
+          <div className="flex items-center">
+            <Upload className="h-4 w-4 mr-2" style={{ color: canUploadFiles ? '#22c55e' : '#9ca3af' }} />
+            <span>
+              {canUploadFiles 
+                ? "File uploads: Enabled" 
+                : <>File uploads: <span className="text-gray-400">Unavailable</span> <Link to="/pricing" className="text-primary text-sm ml-2 underline">Upgrade</Link></>}
+            </span>
+          </div>
 
           {plan?.price && plan.price > 0 && (
             <div className="mt-4">
