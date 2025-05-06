@@ -81,16 +81,23 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       
       // Upload file to Supabase Storage
       const fileName = `${crypto.randomUUID()}-${file.name}`;
+      
+      // Create a listener for upload progress
+      const uploadProgressListener = (progress: number) => {
+        const percent = progress * 100;
+        setUploadProgress(Math.round(percent));
+      };
+      
+      // Upload the file
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('link_files')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            const percent = (progress.loaded / progress.total) * 100;
-            setUploadProgress(Math.round(percent));
-          }
+          upsert: false
         });
+      
+      // Update progress when done
+      setUploadProgress(100);
       
       if (uploadError) throw uploadError;
       
