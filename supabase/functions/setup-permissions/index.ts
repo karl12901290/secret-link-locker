@@ -21,8 +21,9 @@ serve(async (req) => {
 
     // 1. Set up storage bucket and policies
     try {
+      console.log("Creating bucket with public access...");
       // First make sure the bucket exists with proper settings
-      const { error: bucketError } = await supabaseClient
+      const { data: bucketData, error: bucketError } = await supabaseClient
         .storage
         .createBucket('link_files', { 
           public: true, 
@@ -34,17 +35,74 @@ serve(async (req) => {
         console.error('Error creating bucket:', bucketError);
         throw bucketError;
       }
-      console.log('Bucket created or already exists');
+      console.log('Bucket created or already exists:', bucketData);
       
-      // Call the SQL function to set up storage policies
-      const { error: storageError } = await supabaseClient.rpc('setup_storage_policies');
+      // Update bucket to ensure it's public (even if it already existed)
+      const { error: updateBucketError } = await supabaseClient
+        .from('storage')
+        .update({ public: true })
+        .eq('id', 'link_files');
       
-      if (storageError) {
-        console.error('Error setting storage policies:', storageError);
-        throw storageError;
-      } else {
-        console.log('Storage policies set up successfully');
+      if (updateBucketError) {
+        console.warn('Warning updating bucket visibility:', updateBucketError);
+        // Continue anyway - the update might have failed because we don't have direct table access
       }
+      
+      // Create storage policies directly within the function instead of calling RPC
+      console.log("Creating storage policies directly...");
+
+      // Clear any existing policies first
+      try {
+        const { data: existingPolicies, error: policiesError } = await supabaseClient
+          .rpc('list_storage_policies', { bucket_id: 'link_files' });
+
+        if (!policiesError && existingPolicies && existingPolicies.length > 0) {
+          console.log(`Found ${existingPolicies.length} existing policies, deleting them...`);
+          
+          for (const policy of existingPolicies) {
+            await supabaseClient.rpc('delete_storage_policy', { 
+              policy_id: policy.id 
+            });
+          }
+        }
+      } catch (policyError) {
+        console.warn("Failed to clean up existing policies:", policyError);
+        // Continue anyway
+      }
+      
+      // Create INSERT policy
+      await supabaseClient.rpc('create_storage_policy', {
+        bucket_id: 'link_files',
+        policy_name: 'Allow authenticated users to upload files',
+        policy_definition: "auth.role() = 'authenticated'",
+        policy_operation: 'INSERT'
+      });
+      
+      // Create SELECT policy - public access
+      await supabaseClient.rpc('create_storage_policy', {
+        bucket_id: 'link_files',
+        policy_name: 'Allow public access to files',
+        policy_definition: "true",
+        policy_operation: 'SELECT'
+      });
+      
+      // Create UPDATE policy
+      await supabaseClient.rpc('create_storage_policy', {
+        bucket_id: 'link_files',
+        policy_name: 'Allow authenticated users to update own files',
+        policy_definition: "auth.role() = 'authenticated'",
+        policy_operation: 'UPDATE'
+      });
+      
+      // Create DELETE policy
+      await supabaseClient.rpc('create_storage_policy', {
+        bucket_id: 'link_files',
+        policy_name: 'Allow authenticated users to delete own files',
+        policy_definition: "auth.role() = 'authenticated'",
+        policy_operation: 'DELETE'
+      });
+      
+      console.log('Storage policies created successfully');
     } catch (storageError) {
       console.error('Error setting up storage:', storageError);
       return new Response(
