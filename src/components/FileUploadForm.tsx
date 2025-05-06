@@ -91,8 +91,8 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
           cacheControl: '3600',
           upsert: false
         });
-      
-      // Update progress when done
+
+      // Set upload progress to complete
       setUploadProgress(100);
       
       if (uploadError) throw uploadError;
@@ -106,9 +106,13 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       
       console.log("Generated public URL:", urlData.publicUrl);
       
+      // Create a custom short link ID - using uuid v4 for collision resistance
+      const linkId = crypto.randomUUID();
+      
       // Create a link record for the file
       const { data, error } = await supabase.from("links").insert([
         {
+          id: linkId, // Use our custom ID
           title,
           url: urlData.publicUrl,
           password: password || null,
@@ -121,6 +125,9 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       ]);
 
       if (error) throw error;
+      
+      // Log success with the custom link ID
+      console.log("Link created successfully with ID:", linkId);
       
       toast({
         title: "File uploaded",

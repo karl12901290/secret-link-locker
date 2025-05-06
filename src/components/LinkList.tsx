@@ -62,8 +62,12 @@ const LinkList = memo(({ links, loading, onDelete }: LinkListProps) => {
   };
   
   const copyToClipboard = (id: string) => {
+    // Ensure proper URL format using window.location.origin
     const url = `${window.location.origin}/l/${id}`;
     navigator.clipboard.writeText(url);
+    
+    console.log("Copied link to clipboard:", url); // Add logging
+    
     toast({
       title: "Link copied!",
       description: "Link copied to clipboard"

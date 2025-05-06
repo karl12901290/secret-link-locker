@@ -16,7 +16,7 @@ interface LinkData {
   password: string | null;
   expiration_date: string | null;
   views: number;
-  file_path?: string; // Add support for file paths
+  file_path?: string;
 }
 
 const ViewLink = () => {
@@ -33,6 +33,7 @@ const ViewLink = () => {
   useEffect(() => {
     const fetchLink = async () => {
       if (!id) {
+        console.error("No link ID provided");
         setNotFound(true);
         setLoading(false);
         return;
@@ -44,7 +45,7 @@ const ViewLink = () => {
           .from("links")
           .select("*")
           .eq("id", id)
-          .single();
+          .maybeSingle();
           
         if (error) {
           console.error("Error fetching link:", error);
@@ -53,21 +54,25 @@ const ViewLink = () => {
           return;
         }
         
+        if (!data) {
+          console.log("Link not found:", id);
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
         console.log("Link data retrieved:", data);
         
-        if (data) {
-          setLink(data);
-          
-          if (data.expiration_date && new Date(data.expiration_date) < new Date()) {
-            setExpired(true);
-          }
-          
-          if (!data.password) {
-            setAuthenticated(true);
-            incrementViews();
-          }
-        } else {
-          setNotFound(true);
+        setLink(data);
+        
+        if (data.expiration_date && new Date(data.expiration_date) < new Date()) {
+          console.log("Link expired:", data.expiration_date);
+          setExpired(true);
+        }
+        
+        if (!data.password) {
+          setAuthenticated(true);
+          incrementViews();
         }
       } catch (error: any) {
         console.error("Error in fetchLink:", error);
