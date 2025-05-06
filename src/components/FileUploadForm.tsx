@@ -82,11 +82,7 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       // Upload file to Supabase Storage
       const fileName = `${crypto.randomUUID()}-${file.name}`;
       
-      // Create a listener for upload progress
-      const uploadProgressListener = (progress: number) => {
-        const percent = progress * 100;
-        setUploadProgress(Math.round(percent));
-      };
+      console.log("Starting file upload:", fileName);
       
       // Upload the file
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -101,10 +97,14 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       
       if (uploadError) throw uploadError;
       
+      console.log("File uploaded successfully:", fileName);
+      
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from('link_files')
         .getPublicUrl(fileName);
+      
+      console.log("Generated public URL:", urlData.publicUrl);
       
       // Create a link record for the file
       const { data, error } = await supabase.from("links").insert([
@@ -134,6 +134,7 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
       setUploadProgress(0);
       onSuccess();
     } catch (error: any) {
+      console.error("Error during file upload:", error);
       toast({
         title: "Error uploading file",
         description: error.message,
