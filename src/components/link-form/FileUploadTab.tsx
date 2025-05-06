@@ -152,7 +152,7 @@ const FileUploadTab = ({ file, setFile, setTitle, title }: FileUploadTabProps) =
         </div>
       )}
       
-      <Alert variant="outline">
+      <Alert variant="default">
         <AlertCircle className="h-4 w-4 mr-2" />
         <AlertDescription className="text-xs">
           Files must be under 50MB. Uploaded files will be publicly accessible.
