@@ -13,59 +13,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [setupComplete, setSetupComplete] = useState(false);
-  const [setupInProgress, setSetupInProgress] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Initialize buckets and setup permissions
-  useEffect(() => {
-    const setupPermissions = async () => {
-      try {
-        // Check if user is authenticated first
-        const { data: userData, error: authError } = await supabase.auth.getUser();
-        if (authError || !userData.user) {
-          console.log('User not authenticated yet, skipping setup');
-          return;
-        }
-        
-        setSetupInProgress(true);
-
-        // Call setup-permissions edge function to set up storage and RLS policies
-        const { data, error } = await supabase.functions.invoke('setup-permissions');
-        
-        if (error) {
-          console.error('Error setting up permissions:', error);
-          toast({
-            title: "Setup Error",
-            description: "There was a problem setting up permissions. Please try again.",
-            variant: "destructive"
-          });
-        } else {
-          console.log('Storage and permissions setup completed successfully:', data);
-          setSetupComplete(true);
-          toast({
-            title: "Setup Complete",
-            description: "Storage and permissions setup completed successfully.",
-          });
-        }
-      } catch (error) {
-        console.error('Error initializing storage and permissions:', error);
-        toast({
-          title: "Setup Error",
-          description: "There was a problem setting up permissions. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setSetupInProgress(false);
-      }
-    };
-    
-    if (!setupComplete && !setupInProgress) {
-      setupPermissions();
-    }
-  }, [toast, setupComplete, setupInProgress]);
-  
   // Use React Query for data fetching with caching
   const { data: links = [], isLoading, refetch } = useQuery({
     queryKey: ['links'],
@@ -75,10 +25,7 @@ const Dashboard = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching links:", error);
-        throw error;
-      }
+      if (error) throw error;
       return data || [];
     },
     staleTime: 5000, // Consider data fresh for 5 seconds
@@ -96,8 +43,8 @@ const Dashboard = () => {
           schema: 'public', 
           table: 'links' 
         },
-        (payload) => {
-          console.log('Links table changed:', payload);
+        () => {
+          // Refetch data when links changes happen
           refetch();
         }
       )
@@ -113,8 +60,7 @@ const Dashboard = () => {
           schema: 'public', 
           table: 'profiles' 
         },
-        (payload) => {
-          console.log('Profiles table changed:', payload);
+        () => {
           // Invalidate plan details query to refresh plan info
           queryClient.invalidateQueries({ queryKey: ['planDetails'] });
         }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -322,7 +323,7 @@ const Pricing = () => {
                         Pay with Crypto
                       </>}
                 </Button>
-                {currentPlan === plan.name && plan.name !== "Explorer" && (
+                {currentPlan === plan.name && (
                   <Button 
                     variant="secondary"
                     onClick={() => navigate("/dashboard")}
