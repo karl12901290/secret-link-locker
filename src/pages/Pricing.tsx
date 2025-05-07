@@ -11,7 +11,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, Bitcoin, Zap } from "lucide-react";
+import { Shield, CheckCircle, Bitcoin, Zap, ArrowLeft, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -191,6 +191,42 @@ const Pricing = () => {
     );
   };
 
+  // Helper function to highlight the free plan's link limit of 5
+  const highlightExplorerLimit = (plan: Plan) => {
+    if (plan.name === "Explorer" || plan.price === 0) {
+      return (
+        <div className="flex items-center">
+          <Shield className="h-4 w-4 text-primary mr-2" />
+          <span className="font-medium">Up to 5 links</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-center">
+        <Shield className="h-4 w-4 text-primary mr-2" />
+        <span>
+          {plan.links_limit === -1
+            ? "Unlimited links"
+            : `${plan.links_limit} links`}
+        </span>
+      </div>
+    );
+  };
+
+  const renderFileUploadFeature = (plan: Plan) => {
+    const hasFileUpload = plan.name !== "Explorer" && plan.price > 0;
+    
+    return (
+      <div className="flex items-center">
+        <Upload className="h-4 w-4 mr-2" style={{ color: hasFileUpload ? '#22c55e' : '#9ca3af' }} />
+        <span className={hasFileUpload ? '' : 'text-gray-400 line-through'}>
+          File uploads
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12">
       <div className="container px-4 mx-auto">
@@ -203,6 +239,20 @@ const Pricing = () => {
             <Bitcoin className="h-5 w-5 text-orange-500 mr-2" />
             <span className="text-sm">We accept cryptocurrency payments via Coinbase Commerce</span>
           </div>
+          
+          {isAuthenticated && currentPlan && (
+            <div className="mt-4 flex justify-center">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => navigate("/dashboard")}
+              >
+                <ArrowLeft className="h-4 w-4" /> 
+                Back to Dashboard
+              </Button>
+            </div>
+          )}
+          
           {!isAuthenticated && (
             <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
               <p className="text-yellow-700">
@@ -226,6 +276,8 @@ const Pricing = () => {
               className={`flex flex-col ${
                 plan.name === "Power" 
                   ? "border-primary ring-2 ring-primary ring-opacity-50" 
+                  : plan.name === "Explorer"
+                  ? "border-amber-200" 
                   : ""
               }`}
             >
@@ -235,6 +287,11 @@ const Pricing = () => {
                   {plan.name === "Power" && (
                     <Badge variant="secondary" className="ml-2">
                       Popular
+                    </Badge>
+                  )}
+                  {plan.name === "Explorer" && (
+                    <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-200">
+                      Free
                     </Badge>
                   )}
                 </div>
@@ -247,14 +304,7 @@ const Pricing = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center">
-                    <Shield className="h-4 w-4 text-primary mr-2" />
-                    <span>
-                      {plan.links_limit === -1
-                        ? "Unlimited links"
-                        : `${plan.links_limit} links`}
-                    </span>
-                  </div>
+                  {highlightExplorerLimit(plan)}
                   
                   <div className="flex items-center">
                     <Shield className="h-4 w-4 text-primary mr-2" />
@@ -265,6 +315,8 @@ const Pricing = () => {
                     </span>
                   </div>
                   
+                  {renderFileUploadFeature(plan)}
+                  
                   {plan.features && Array.isArray(plan.features) && renderFeatures(plan.features as string[])}
                 </div>
               </CardContent>
@@ -273,7 +325,7 @@ const Pricing = () => {
                   onClick={() => handleSelectPlan(plan.name, plan.id, plan.price === 0)}
                   disabled={loading || currentPlan === plan.name}
                   className="w-full"
-                  variant={plan.name === "Power" ? "default" : "outline"}
+                  variant={plan.name === "Power" ? "default" : plan.name === "Explorer" ? "secondary" : "outline"}
                 >
                   {currentPlan === plan.name
                     ? "Current Plan"

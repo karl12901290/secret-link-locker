@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -7,47 +7,84 @@ import { Link } from "react-router-dom";
 import { getUserPlanDetails, getSubscriptionDetails } from "@/services/subscription";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Calendar, Bitcoin } from "lucide-react";
+import { Zap, Calendar, Bitcoin, AlertTriangle, Upload } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { Json } from "@/integrations/supabase/types";
 
-const PlanInfo = () => {
-  const [planDetails, setPlanDetails] = useState<any>(null);
-  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+// Define types for the plan details data structure
+type PlanDetails = {
+  credits_balance: number;
+  plan: string;
+  billing_cycle_start: string | null;
+  links_created: number;
+  plans: {
+    name: string;
+    price: number;
+    links_limit: number;
+    max_expiration_days: number | null;
+    description: string | null;
+    features: Json | null;
+  } | null;
+}
+
+// Memoize component to prevent unnecessary re-renders
+const PlanInfo = memo(() => {
   const { toast } = useToast();
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const [planData, subData] = await Promise.all([
-          getUserPlanDetails(),
-          getSubscriptionDetails()
-        ]);
-        
-        setPlanDetails(planData);
-        setSubscriptionDetails(subData);
-      } catch (error: any) {
+  
+  // Use React Query for efficient data fetching with caching
+  const { data: planDetails, isLoading: planLoading } = useQuery<PlanDetails>({
+    queryKey: ['planDetails'],
+    queryFn: getUserPlanDetails,
+    staleTime: 60000, // Consider data fresh for 1 minute
+    meta: {
+      onError: (error: Error) => {
         toast({
           title: "Error loading plan details",
           description: error.message,
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
+      }
+    }
+  });
+
+  const { data: subscriptionDetails, isLoading: subLoading } = useQuery({
+    queryKey: ['subscriptionDetails'],
+    queryFn: getSubscriptionDetails,
+    staleTime: 60000, // Consider data fresh for 1 minute
+    enabled: !!planDetails, // Only fetch subscription after plan details
+  });
+
+  const loading = planLoading || subLoading;
+
+  // Initialize storage bucket
+  useEffect(() => {
+    const setupStorage = async () => {
+      try {
+        const response = await fetch('/functions/v1/setup-storage', {
+          method: 'POST',
+        });
+        const data = await response.json();
+        if (!data.success) {
+          console.error('Error setting up storage:', data.error);
+        }
+      } catch (error) {
+        console.error('Failed to initialize storage:', error);
       }
     };
 
-    fetchDetails();
-  }, [toast]);
+    setupStorage();
+  }, []);
 
   if (loading) {
     return (
       <Card className="w-full">
         <CardContent className="p-6">
-          <div className="animate-pulse flex flex-col gap-4">
-            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -65,9 +102,18 @@ const PlanInfo = () => {
   }
 
   const plan = planDetails.plans;
-  const usedLinksPercent = plan?.links_limit > 0 
+  const usedLinksPercent = plan?.links_limit && plan.links_limit > 0 
     ? (planDetails.links_created / plan.links_limit) * 100
     : 0;
+  
+  // Determine if the user is approaching or has reached their limit
+  const isApproachingLimit = plan?.links_limit && plan.links_limit > 0 && 
+    planDetails.links_created >= Math.floor(plan.links_limit * 0.8);
+  
+  const hasReachedLimit = plan?.links_limit && plan.links_limit > 0 && 
+    planDetails.links_created >= plan.links_limit;
+
+  const canUploadFiles = plan && plan.price > 0;
 
   return (
     <Card className="w-full">
@@ -86,7 +132,7 @@ const PlanInfo = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {plan?.links_limit > 0 && (
+          {plan?.links_limit && plan.links_limit > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Links Usage</span>
@@ -94,7 +140,24 @@ const PlanInfo = () => {
                   {planDetails.links_created} / {plan.links_limit}
                 </span>
               </div>
-              <Progress value={usedLinksPercent} className="h-2" />
+              <Progress 
+                value={usedLinksPercent} 
+                className={`h-2 ${hasReachedLimit ? 'bg-red-200' : isApproachingLimit ? 'bg-amber-200' : ''}`} 
+              />
+              
+              {hasReachedLimit && (
+                <div className="flex items-center mt-2 p-2 bg-red-50 border border-red-100 rounded-md text-sm">
+                  <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+                  <span>You've reached your plan's link limit. <Link to="/pricing" className="text-primary underline">Upgrade your plan</Link> for more links.</span>
+                </div>
+              )}
+              
+              {!hasReachedLimit && isApproachingLimit && (
+                <div className="flex items-center mt-2 p-2 bg-amber-50 border border-amber-100 rounded-md text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                  <span>You're approaching your plan's link limit.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -127,8 +190,17 @@ const PlanInfo = () => {
               <span>Payment method: Cryptocurrency</span>
             </div>
           )}
+          
+          <div className="flex items-center">
+            <Upload className="h-4 w-4 mr-2" style={{ color: canUploadFiles ? '#22c55e' : '#9ca3af' }} />
+            <span>
+              {canUploadFiles 
+                ? "File uploads: Enabled" 
+                : <>File uploads: <span className="text-gray-400">Unavailable</span> <Link to="/pricing" className="text-primary text-sm ml-2 underline">Upgrade</Link></>}
+            </span>
+          </div>
 
-          {plan?.price > 0 && (
+          {plan?.price && plan.price > 0 && (
             <div className="mt-4">
               <div className="text-xl font-bold">${plan.price}<span className="text-sm text-gray-600">/month</span></div>
             </div>
@@ -142,6 +214,6 @@ const PlanInfo = () => {
       </CardFooter>
     </Card>
   );
-};
+});
 
 export default PlanInfo;

@@ -15,9 +15,37 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  // Check if the user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Check if user has a plan
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('plan_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        // If they have a plan, redirect to dashboard, otherwise to pricing
+        if (profileData?.plan_id) {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/pricing", { replace: true });
+        }
+      }
+      
+      setCheckingAuth(false);
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   // Check if the user is arriving from an email verification link
   useEffect(() => {
@@ -33,20 +61,14 @@ const Auth = () => {
           if (error) throw error;
           
           if (data?.user) {
-            // User is verified and authenticated, redirect to dashboard
+            // User is verified and authenticated
             toast({
               title: "Email verified",
               description: "Your email has been verified successfully.",
             });
             
-            // Check if there was a selected plan in session storage
-            const selectedPlan = sessionStorage.getItem("selectedPlan");
-            if (selectedPlan) {
-              sessionStorage.removeItem("selectedPlan");
-              navigate("/pricing");
-            } else {
-              navigate("/dashboard");
-            }
+            // Redirect to pricing page to select a plan
+            navigate("/pricing");
           }
         } catch (error: any) {
           console.error("Error verifying email:", error);
@@ -116,14 +138,8 @@ const Auth = () => {
         return;
       }
       
-      // Check if there was a selected plan in session storage
-      const selectedPlan = sessionStorage.getItem("selectedPlan");
-      if (selectedPlan) {
-        sessionStorage.removeItem("selectedPlan");
-        navigate("/pricing");
-      } else {
-        navigate("/dashboard");
-      }
+      // After successful login, redirect to pricing page to select a plan
+      navigate("/pricing");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -157,6 +173,22 @@ const Auth = () => {
     }
   };
 
+  if (checkingAuth || loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4">
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+          </div>
+          <h3 className="font-semibold">Checking authentication...</h3>
+          <p className="text-sm text-muted-foreground">
+            Please wait while we verify your account.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4">
       <Card className="w-full max-w-md">
@@ -165,17 +197,7 @@ const Auth = () => {
           <CardDescription>Secure file sharing made simple</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-              </div>
-              <h3 className="font-semibold">Processing...</h3>
-              <p className="text-sm text-muted-foreground">
-                Please wait while we verify your account.
-              </p>
-            </div>
-          ) : verificationSent ? (
+          {verificationSent ? (
             <div className="text-center space-y-4">
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <Mail className="w-6 h-6 text-primary" />
