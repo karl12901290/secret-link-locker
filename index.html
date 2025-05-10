@@ -1,27 +1,78 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SnapLink</title>
-    <meta name="description" content="Secure file sharing with password protection and expiration dates" />
+    <title>SnapLink - Secure File Sharing with Password Protection</title>
+    <meta name="description" content="Secure file sharing platform with password protection, expiration dates, and advanced security features. Share your files safely with SnapLink." />
     <meta name="author" content="SnapLink" />
+    <meta name="keywords" content="file sharing, secure file sharing, password protection, file security, secure links, file expiration" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://snaplink.dev" />
 
-    <meta property="og:title" content="SnapLink" />
-    <meta property="og:description" content="Secure file sharing with password protection and expiration dates" />
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SnapLink",
+      "description": "Secure file sharing platform with password protection, expiration dates, and advanced security features.",
+      "url": "https://snaplink.dev",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Password Protection",
+        "File Expiration",
+        "Secure File Sharing",
+        "Advanced Security Features"
+      ]
+    }
+    </script>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:title" content="SnapLink - Secure File Sharing" />
+    <meta property="og:description" content="Secure file sharing platform with password protection, expiration dates, and advanced security features. Share your files safely with SnapLink." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="https://snaplink.dev/opengraph-image.png" />
+    <meta property="og:url" content="https://snaplink.dev" />
+    <meta property="og:site_name" content="SnapLink" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@snaplink_dev" />
+    <meta name="twitter:title" content="SnapLink - Secure File Sharing" />
+    <meta name="twitter:description" content="Secure file sharing platform with password protection, expiration dates, and advanced security features. Share your files safely with SnapLink." />
+    <meta name="twitter:image" content="https://snaplink.dev/opengraph-image.png" />
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SnapLink" />
+    <meta name="application-name" content="SnapLink" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-tap-highlight" content="no" />
   </head>
 
   <body>
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
