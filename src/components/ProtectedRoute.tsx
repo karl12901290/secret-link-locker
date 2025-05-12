@@ -1,4 +1,3 @@
-
 import { useState, useEffect, memo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,53 +11,61 @@ interface ProtectedRouteProps {
 const ProtectedRoute = memo(({ children }: ProtectedRouteProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasPlan, setHasPlan] = useState(true); // Default to true
+  const [hasPlan, setHasPlan] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         if (!session) {
+          setLoading(false);
+          setHasPlan(false);
+        } else {
+          // Check if user has a selected plan
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('plan_id')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.error("Error checking user plan:", error);
+            setHasPlan(false);
+          } else {
+            setHasPlan(!!data?.plan_id);
+          }
           setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       
-      // Check if user has a selected plan
       if (session) {
-        checkUserPlan(session.user.id);
-      } else {
-        setLoading(false);
+        // Check if user has a selected plan
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('plan_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error checking user plan:", error);
+          setHasPlan(false);
+        } else {
+          setHasPlan(!!data?.plan_id);
+        }
       }
+      
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const checkUserPlan = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('plan_id')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      
-      // If user has no plan_id or it's null, they need to select a plan
-      setHasPlan(!!data.plan_id);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error checking user plan:", error);
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -73,11 +80,13 @@ const ProtectedRoute = memo(({ children }: ProtectedRouteProps) => {
   }
 
   if (!session) {
-    return <Navigate to="/auth" replace />;
+    // Redirect to auth page with return URL
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (!hasPlan) {
-    return <Navigate to="/pricing" replace />;
+    // Redirect to pricing page if user doesn't have a plan
+    return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

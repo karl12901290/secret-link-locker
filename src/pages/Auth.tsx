@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,8 +17,12 @@ const Auth = () => {
   const [verificationSent, setVerificationSent] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  // Get the return URL from location state or default to dashboard
+  const from = (location.state as any)?.from?.pathname || "/dashboard";
 
   // Check if the user is already authenticated
   useEffect(() => {
@@ -33,9 +37,9 @@ const Auth = () => {
           .eq('id', session.user.id)
           .single();
         
-        // If they have a plan, redirect to dashboard, otherwise to pricing
+        // If they have a plan, redirect to intended destination, otherwise to pricing
         if (profileData?.plan_id) {
-          navigate("/dashboard", { replace: true });
+          navigate(from, { replace: true });
         } else {
           navigate("/pricing", { replace: true });
         }
@@ -45,7 +49,7 @@ const Auth = () => {
     };
     
     checkAuth();
-  }, [navigate]);
+  }, [navigate, from]);
 
   // Check if the user is arriving from an email verification link
   useEffect(() => {
@@ -138,8 +142,19 @@ const Auth = () => {
         return;
       }
       
-      // After successful login, redirect to pricing page to select a plan
-      navigate("/pricing");
+      // Check if user has a plan
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('plan_id')
+        .eq('id', data.user.id)
+        .single();
+      
+      // If they have a plan, redirect to intended destination, otherwise to pricing
+      if (profileData?.plan_id) {
+        navigate(from, { replace: true });
+      } else {
+        navigate("/pricing", { replace: true });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
