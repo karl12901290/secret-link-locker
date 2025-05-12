@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     modulePreload: {
       polyfill: true
-    }
+    },
+    assetsDir: 'assets',
+    base: './'
   },
 }));

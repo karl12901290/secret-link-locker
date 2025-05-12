@@ -25,6 +25,13 @@
       "continue": true
     },
     {
+      "src": "/(.*\\.css)",
+      "headers": {
+        "content-type": "text/css"
+      },
+      "continue": true
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
