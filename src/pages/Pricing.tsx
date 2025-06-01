@@ -129,9 +129,13 @@ const Pricing = () => {
       const result = await createCheckoutSession(planId);
       
       if (result?.isFree) {
-        // Free plan was activated directly
-        navigate(result.url);
+        // For free plans, show success message and redirect
+        sonnerToast.success("Plan activated", {
+          description: "Your free plan has been activated successfully"
+        });
+        setTimeout(() => navigate("/dashboard"), 1000);
       } else if (result && result.url) {
+        // For paid plans, redirect to payment
         window.location.href = result.url;
       } else {
         throw new Error("Failed to create checkout session");
