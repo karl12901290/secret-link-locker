@@ -8,10 +8,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { LinkService } from "@/services/linkService";
+import { useToast } from "@/components/ui/use-toast";
 
 const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [title, setTitle] = useState("");
@@ -50,96 +50,37 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
     }
     
     setIsLoading(true);
-    setUploadProgress(0);
+    setUploadProgress(50);
 
     try {
-      // First check if user can upload files based on plan
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select(`
-          plan,
-          plans:plan_id (
-            name,
-            price
-          )
-        `)
-        .eq("id", (await supabase.auth.getUser()).data.user?.id || '')
-        .single();
-      
-      if (profileError) throw profileError;
-      
-      // Check if user has a paid plan that allows file uploads
-      if (profileData.plans && (profileData.plans.name === "Explorer" || profileData.plans.price === 0)) {
+      const result = await LinkService.createLink({
+        title,
+        url: "", // Will be set by the service
+        password: password || undefined,
+        expirationDate: expirationDate || undefined,
+        fileData: {
+          file,
+          fileName: file.name,
+          fileSize: file.size
+        }
+      });
+
+      setUploadProgress(100);
+
+      if (result.success) {
+        setTitle("");
+        setFile(null);
+        setPassword("");
+        setExpirationDate(null);
+        setUploadProgress(0);
+        onSuccess();
+      } else {
         toast({
-          title: "Plan limitation",
-          description: "File uploads are only available on paid plans. Please upgrade your plan.",
+          title: "Error uploading file",
+          description: result.error || "Unknown error occurred",
           variant: "destructive",
         });
-        setIsLoading(false);
-        return;
       }
-      
-      // Upload file to Supabase Storage
-      const fileName = `${crypto.randomUUID()}-${file.name}`;
-      
-      console.log("Starting file upload:", fileName);
-      
-      // Upload the file
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('link_files')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      // Set upload progress to complete
-      setUploadProgress(100);
-      
-      if (uploadError) throw uploadError;
-      
-      console.log("File uploaded successfully:", fileName);
-      
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('link_files')
-        .getPublicUrl(fileName);
-      
-      console.log("Generated public URL:", urlData.publicUrl);
-      
-      // Create a custom short link ID - using uuid v4 for collision resistance
-      const linkId = crypto.randomUUID();
-      
-      // Create a link record for the file
-      const { data, error } = await supabase.from("links").insert([
-        {
-          id: linkId, // Use our custom ID
-          title,
-          url: urlData.publicUrl,
-          password: password || null,
-          expiration_date: expirationDate?.toISOString() || null,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          file_name: file.name,
-          file_size: file.size,
-          file_path: fileName,
-        },
-      ]);
-
-      if (error) throw error;
-      
-      // Log success with the custom link ID
-      console.log("Link created successfully with ID:", linkId);
-      
-      toast({
-        title: "File uploaded",
-        description: "Your file has been uploaded and a secure link has been created",
-      });
-      
-      setTitle("");
-      setFile(null);
-      setPassword("");
-      setExpirationDate(null);
-      setUploadProgress(0);
-      onSuccess();
     } catch (error: any) {
       console.error("Error during file upload:", error);
       toast({
@@ -232,9 +173,7 @@ const FileUploadForm = ({ onSuccess }: { onSuccess: () => void }) => {
               mode="single"
               selected={expirationDate}
               onSelect={setExpirationDate}
-              disabled={(date) =>
-                date < new Date()
-              }
+              disabled={(date) => date < new Date()}
               initialFocus
             />
           </PopoverContent>
