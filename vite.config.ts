@@ -16,13 +16,19 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    // Only add componentTagger in development mode and ensure it doesn't interfere with React
+    // Only add componentTagger in development mode
     ...(mode === 'development' ? [componentTagger()] : []),
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Ensure React is deduplicated
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // Force pre-bundling of React to avoid version conflicts
+    include: ['react', 'react-dom'],
   },
   build: {
     rollupOptions: {
