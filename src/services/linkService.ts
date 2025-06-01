@@ -41,7 +41,6 @@ export class LinkService {
       let finalUrl = data.url;
       let fileName: string | null = null;
       let fileSize: number | null = null;
-      let filePath: string | null = null;
 
       // Handle file upload if present
       if (data.fileData) {
@@ -52,13 +51,12 @@ export class LinkService {
         finalUrl = uploadResult.publicUrl!;
         fileName = data.fileData.fileName;
         fileSize = data.fileData.fileSize;
-        filePath = uploadResult.filePath!;
       }
 
       // Generate custom link ID
       const linkId = crypto.randomUUID();
 
-      // Create link record
+      // Create link record - only include columns that exist in the table
       const { data: linkData, error: linkError } = await supabase
         .from("links")
         .insert([{
@@ -68,9 +66,6 @@ export class LinkService {
           password: data.password || null,
           expiration_date: data.expirationDate?.toISOString() || null,
           user_id: userData.user.id,
-          file_name: fileName,
-          file_size: fileSize,
-          file_path: filePath,
         }])
         .select()
         .single();
@@ -129,7 +124,7 @@ export class LinkService {
     }
   }
 
-  static async uploadFile(file: File): Promise<{ success: boolean; publicUrl?: string; filePath?: string; error?: string }> {
+  static async uploadFile(file: File): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
     try {
       console.log("Starting file upload:", file.name, file.size);
 
@@ -163,8 +158,7 @@ export class LinkService {
       console.log("File uploaded successfully:", fileName);
       return { 
         success: true, 
-        publicUrl: urlData.publicUrl,
-        filePath: fileName 
+        publicUrl: urlData.publicUrl
       };
     } catch (error: any) {
       console.error("File upload error:", error);
@@ -208,28 +202,6 @@ export class LinkService {
 
   static async deleteLink(linkId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get link details first to check file deletion
-      const { data: link, error: fetchError } = await supabase
-        .from("links")
-        .select("file_path")
-        .eq("id", linkId)
-        .single();
-
-      if (fetchError) {
-        return { success: false, error: fetchError.message };
-      }
-
-      // Delete file from storage if exists
-      if (link?.file_path) {
-        const { error: storageError } = await supabase.storage
-          .from('link_files')
-          .remove([link.file_path]);
-        
-        if (storageError) {
-          console.warn("Could not delete file from storage:", storageError);
-        }
-      }
-
       // Delete link record
       const { error: deleteError } = await supabase
         .from("links")

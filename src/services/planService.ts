@@ -10,7 +10,7 @@ export interface Plan {
   max_expiration_days: number | null;
   allow_password: boolean;
   allow_analytics: boolean;
-  features: any[];
+  features: string[];
   created_at: string;
   updated_at: string;
 }
@@ -27,7 +27,13 @@ export class PlanService {
         return { success: false, error: error.message };
       }
 
-      return { success: true, plans: plans || [] };
+      // Transform the data to match our Plan interface
+      const transformedPlans: Plan[] = (plans || []).map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : []
+      }));
+
+      return { success: true, plans: transformedPlans };
     } catch (error: any) {
       console.error("Error fetching plans:", error);
       return { success: false, error: error.message };
