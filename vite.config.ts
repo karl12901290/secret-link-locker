@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     // Force pre-bundling of React to avoid version conflicts
     include: ['react', 'react-dom'],
+    // Force rebuild of tooltip package
+    force: true,
   },
   build: {
     rollupOptions: {
@@ -39,6 +41,7 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          tooltip: ['@radix-ui/react-tooltip'],
         },
         format: 'es',
         entryFileNames: 'assets/[name]-[hash].js',
