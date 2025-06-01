@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface Plan {
   id: string;
@@ -29,8 +29,17 @@ export class PlanService {
 
       // Transform the data to match our Plan interface
       const transformedPlans: Plan[] = (plans || []).map(plan => ({
-        ...plan,
-        features: Array.isArray(plan.features) ? plan.features : []
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        description: plan.description,
+        links_limit: plan.links_limit,
+        max_expiration_days: plan.max_expiration_days,
+        allow_password: plan.allow_password ?? true,
+        allow_analytics: plan.allow_analytics ?? false,
+        features: this.transformFeatures(plan.features),
+        created_at: plan.created_at || new Date().toISOString(),
+        updated_at: plan.updated_at || new Date().toISOString(),
       }));
 
       return { success: true, plans: transformedPlans };
@@ -38,6 +47,14 @@ export class PlanService {
       console.error("Error fetching plans:", error);
       return { success: false, error: error.message };
     }
+  }
+
+  private static transformFeatures(features: Json | null): string[] {
+    if (!features) return [];
+    if (Array.isArray(features)) {
+      return features.filter(f => typeof f === 'string') as string[];
+    }
+    return [];
   }
 
   static async selectPlan(planId: string): Promise<{ success: boolean; error?: string; requiresPayment?: boolean; checkoutUrl?: string }> {
