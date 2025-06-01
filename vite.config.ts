@@ -32,8 +32,6 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     // Force pre-bundling of React to avoid version conflicts
     include: ['react', 'react-dom'],
-    // Exclude problematic packages from optimization
-    exclude: ['@radix-ui/react-tooltip'],
   },
   build: {
     rollupOptions: {
