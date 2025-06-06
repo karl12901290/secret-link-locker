@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, BarChart, Clock, CheckCircle, ArrowRight } from "lucide-react";
@@ -19,8 +20,20 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import FileUploadCard from "@/components/FileUploadCard";
+import LinkResultCard from "@/components/LinkResultCard";
 
 const Index = () => {
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+
+  const handleUploadSuccess = (linkId: string) => {
+    setUploadSuccess(linkId);
+  };
+
+  const handleCreateAnother = () => {
+    setUploadSuccess(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100 to-blue-50">
       {/* Navigation */}
@@ -79,7 +92,7 @@ const Index = () => {
       </header>
 
       <div className="container mx-auto px-4">
-        {/* Hero Section */}
+        {/* Hero Section with Upload */}
         <div className="flex flex-col lg:flex-row items-center justify-between py-16 lg:py-24 gap-12">
           <div className="max-w-xl">
             <h1 className="text-4xl font-bold text-primary mb-6 md:text-5xl lg:text-6xl leading-tight">
@@ -98,25 +111,17 @@ const Index = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Upload Card */}
           <div className="relative w-full max-w-md">
-            <div className="bg-blue-600/5 backdrop-blur-sm border border-blue-100 rounded-2xl p-8 shadow-lg">
-              <div className="space-y-6">
-                <div className="bg-white p-4 rounded-lg shadow-sm">
-                  <div className="h-10 w-3/4 bg-blue-100 rounded-md mb-3"></div>
-                  <div className="h-4 w-1/2 bg-gray-100 rounded-md"></div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="w-1/2">
-                    <div className="h-10 bg-blue-100 rounded-md mb-2"></div>
-                    <div className="h-4 bg-gray-100 rounded-md w-3/4"></div>
-                  </div>
-                  <div className="h-16 w-16 rounded-full bg-blue-100"></div>
-                </div>
-                <div className="h-12 bg-primary rounded-md flex items-center justify-center text-white font-medium">
-                  Create Secure Link
-                </div>
-              </div>
-            </div>
+            {uploadSuccess ? (
+              <LinkResultCard 
+                linkId={uploadSuccess} 
+                onCreateAnother={handleCreateAnother} 
+              />
+            ) : (
+              <FileUploadCard onSuccess={handleUploadSuccess} />
+            )}
             <div className="absolute -bottom-6 -right-6 h-24 w-24 bg-blue-50 rounded-full border border-blue-100 z-[-1]"></div>
             <div className="absolute -top-6 -left-6 h-16 w-16 bg-blue-50 rounded-full border border-blue-100 z-[-1]"></div>
           </div>
