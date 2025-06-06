@@ -4,22 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, BarChart, Clock, CheckCircle, ArrowRight } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import FileUploadCard from "@/components/FileUploadCard";
 import LinkResultCard from "@/components/LinkResultCard";
 
@@ -42,44 +26,6 @@ const Index = () => {
           <div className="flex items-center">
             <h2 className="text-2xl font-bold text-primary">SnapLink</h2>
           </div>
-          <NavigationMenu className="hidden md:flex">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuLink href="#features" className={navigationMenuTriggerStyle()}>
-                  Features
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink href="#how-it-works" className={navigationMenuTriggerStyle()}>
-                  How It Works
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Plans</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="grid gap-3 p-4 md:w-[400px] lg:w-[500px]">
-                    <div className="p-4">
-                      <h3 className="text-xl font-medium mb-1">Our Pricing Plans</h3>
-                      <p className="text-sm text-muted-foreground">Choose the perfect plan for your needs</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 p-4 rounded-lg hover:bg-slate-100 transition-colors">
-                        <h4 className="font-medium mb-1">Free Plan</h4>
-                        <p className="text-sm text-muted-foreground">Up to 5 secure links</p>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-lg hover:bg-slate-100 transition-colors">
-                        <h4 className="font-medium mb-1">Premium Plans</h4>
-                        <p className="text-sm text-muted-foreground">Unlimited secure links</p>
-                      </div>
-                    </div>
-                    <Button asChild variant="outline" className="mt-3">
-                      <RouterLink to="/pricing">View All Plans</RouterLink>
-                    </Button>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
           <div className="flex items-center gap-4">
             <Button asChild variant="outline">
               <RouterLink to="/auth">Log In</RouterLink>
@@ -222,72 +168,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Testimonials */}
-        <div className="py-16 bg-white rounded-2xl shadow-sm my-20 px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">What Our Users Say</h2>
-          <p className="text-xl text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-            Thousands of users trust SnapLink to share their content securely.
-          </p>
-          
-          <Carousel className="mx-auto max-w-4xl">
-            <CarouselContent>
-              <CarouselItem>
-                <div className="p-6">
-                  <p className="text-lg italic mb-6">
-                    "SnapLink has been a game-changer for our team. We needed a secure way to share 
-                    sensitive documents with clients, and this platform delivered everything we needed."
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                      JD
-                    </div>
-                    <div>
-                      <p className="font-medium">Jane Doe</p>
-                      <p className="text-sm text-gray-600">Product Manager at TechCorp</p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-              <CarouselItem>
-                <div className="p-6">
-                  <p className="text-lg italic mb-6">
-                    "The analytics feature is incredibly useful. Now I know exactly who has viewed my shared files 
-                    and when. The expiration feature gives me peace of mind."
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                      MS
-                    </div>
-                    <div>
-                      <p className="font-medium">Michael Smith</p>
-                      <p className="text-sm text-gray-600">Freelance Designer</p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-              <CarouselItem>
-                <div className="p-6">
-                  <p className="text-lg italic mb-6">
-                    "I've tried many similar services, but SnapLink offers the perfect balance of 
-                    security features and ease of use. The free plan is generous enough for my needs."
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                      AL
-                    </div>
-                    <div>
-                      <p className="font-medium">Amanda Lee</p>
-                      <p className="text-sm text-gray-600">Small Business Owner</p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-            </CarouselContent>
-            <CarouselPrevious className="-left-6 md:-left-10" />
-            <CarouselNext className="-right-6 md:-right-10" />
-          </Carousel>
-        </div>
-
         {/* How it works */}
         <div id="how-it-works" className="py-16 mb-16">
           <h2 className="text-3xl font-bold text-center mb-4">How It Works</h2>
@@ -338,17 +218,6 @@ const Index = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Pricing CTA */}
-        <div className="py-10 mb-16 text-center">
-          <h2 className="text-3xl font-bold mb-4">Plans for Everyone</h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            From free personal use to professional teams, we have plans to fit your needs.
-          </p>
-          <Button asChild size="lg" className="px-8">
-            <RouterLink to="/pricing">View Pricing Plans</RouterLink>
-          </Button>
         </div>
 
         {/* CTA */}
